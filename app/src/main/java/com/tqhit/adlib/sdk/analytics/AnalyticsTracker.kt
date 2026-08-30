@@ -1,6 +1,5 @@
 package com.tqhit.adlib.sdk.analytics
 
-import com.applovin.mediation.MaxAd
 import com.google.android.gms.ads.AdValue
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.tqhit.adlib.sdk.adjust.AdjustAnalyticsHelper
@@ -47,42 +46,28 @@ constructor(
             "admob_sdk")
     }
 
-    fun trackMaxRevenueEvent(
-        impressionData: MaxAd?
-    ) {
+    fun trackHouseAdImpression(adId: String, adType: String) {
         if (Constant.DEBUG_MODE) return
-        impressionData?.let {
-            firebaseAnalyticsHelper.logEvent(
-                "ad_impression_custom",
-                mapOf(
-                    FirebaseAnalytics.Param.AD_PLATFORM to "appLovin",
-                    FirebaseAnalytics.Param.AD_UNIT_NAME to impressionData.adUnitId,
-                    FirebaseAnalytics.Param.AD_FORMAT to impressionData.format.label,
-                    FirebaseAnalytics.Param.AD_SOURCE to impressionData.networkName,
-                    FirebaseAnalytics.Param.VALUE to impressionData.revenue,
-                    FirebaseAnalytics.Param.CURRENCY to "USD"
-                )
+        firebaseAnalyticsHelper.logEvent(
+            "house_ad_impression",
+            mapOf(
+                "house_ad_id" to adId,
+                "house_ad_type" to adType
             )
+        )
+        adjustAnalyticsHelper.trackEvent("house_ad_impression_${adType.lowercase()}")
+    }
 
-            // https://dev.adjust.com/en/sdk/android/features/ad-revenue/
-            adjustAnalyticsHelper.trackRevenueEvent(
-                impressionData.revenue,
-                "USD",
-                "applovin_max_sdk"
+    fun trackHouseAdClick(adId: String, adType: String, targetPackageOrUrl: String) {
+        if (Constant.DEBUG_MODE) return
+        firebaseAnalyticsHelper.logEvent(
+            "house_ad_click",
+            mapOf(
+                "house_ad_id" to adId,
+                "house_ad_type" to adType,
+                "house_ad_target" to targetPackageOrUrl
             )
-
-            // https://firebase.google.com/docs/analytics/measure-ad-revenue#implementation-other-platforms
-            firebaseAnalyticsHelper.logEvent(
-                FirebaseAnalytics.Event.AD_IMPRESSION,
-                mapOf(
-                    FirebaseAnalytics.Param.AD_PLATFORM to "appLovin",
-                    FirebaseAnalytics.Param.AD_UNIT_NAME to impressionData.adUnitId,
-                    FirebaseAnalytics.Param.AD_FORMAT to impressionData.format.label,
-                    FirebaseAnalytics.Param.AD_SOURCE to impressionData.networkName,
-                    FirebaseAnalytics.Param.VALUE to impressionData.revenue,
-                    FirebaseAnalytics.Param.CURRENCY to "USD"
-                )
-            )
-        }
+        )
+        adjustAnalyticsHelper.trackEvent("house_ad_click_${adType.lowercase()}")
     }
 }

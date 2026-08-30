@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/houseBannerRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_demo_card"
+    android:padding="8dp">
+
+    <ImageView
+        android:id="@+id/ivHouseBannerIcon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ads_icon"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:contentDescription="House Ad Icon" />
+
+    <TextView
+        android:id="@+id/tvHouseBannerAdBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:background="#FF9800"
+        android:paddingHorizontal="4dp"
+        android:paddingVertical="1dp"
+        android:text="AD"
+        android:textColor="#FFFFFF"
+        android:textSize="9sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toEndOf="@id/ivHouseBannerIcon"
+        app:layout_constraintTop_toTopOf="@id/ivHouseBannerIcon" />
+
+    <TextView
+        android:id="@+id/tvHouseBannerTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="8dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="Recommended App"
+        android:textColor="@color/black"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="@id/tvHouseBannerAdBadge"
+        app:layout_constraintEnd_toStartOf="@id/btnHouseBannerCta"
+        app:layout_constraintStart_toEndOf="@id/tvHouseBannerAdBadge"
+        app:layout_constraintTop_toTopOf="@id/tvHouseBannerAdBadge" />
+
+    <TextView
+        android:id="@+id/tvHouseBannerDesc"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="2dp"
+        android:layout_marginEnd="8dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="Tap to install from Google Play"
+        android:textColor="#757575"
+        android:textSize="11sp"
+        app:layout_constraintBottom_toBottomOf="@id/ivHouseBannerIcon"
+        app:layout_constraintEnd_toStartOf="@id/btnHouseBannerCta"
+        app:layout_constraintStart_toEndOf="@id/ivHouseBannerIcon"
+        app:layout_constraintTop_toBottomOf="@id/tvHouseBannerTitle" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnHouseBannerCta"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:backgroundTint="#2196F3"
+        android:text="Install"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
+        android:textSize="11sp"
+        app:cornerRadius="18dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/ivHouseBannerClose"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+        android:id="@+id/ivHouseBannerClose"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_marginStart="4dp"
+        android:padding="4dp"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="#9E9E9E"
+        android:contentDescription="Close Ad" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,9 +1,10 @@
 plugins {
-    id("com.android.library")
+    id("com.android.application")
     alias(libs.plugins.kotlin.android)
     id("com.google.dagger.hilt.android")
     id("kotlin-kapt")
-    id("maven-publish")
+    alias(libs.plugins.google.gms.google.services)
+    alias(libs.plugins.google.firebase.crashlytics)
 }
 
 android {
@@ -11,10 +12,20 @@ android {
     compileSdk = 35
 
     defaultConfig {
+        applicationId = "com.aistudio.adlib.clmwqf"
         minSdk = 21
         targetSdk = 35
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("debugConfig") {
+            storeFile = file("${rootDir}/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
@@ -24,6 +35,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("debugConfig")
         }
     }
     compileOptions {
@@ -36,6 +50,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     dataBinding {
@@ -72,22 +87,9 @@ dependencies {
     implementation(libs.ssp.android)
     implementation(libs.sdp.android)
     implementation(libs.androidx.lifecycle.process)
-    implementation(libs.applovin.sdk)
 }
 
 kapt {
     correctErrorTypes = true
 }
 
-publishing {
-    publications {
-        register<MavenPublication>("release") {
-            afterEvaluate {
-                from(components["release"])
-                groupId = "com.github.tqhit"
-                artifactId = "tqhit-adlib"
-                version = "1.0.0"
-            }
-        }
-    }
-}

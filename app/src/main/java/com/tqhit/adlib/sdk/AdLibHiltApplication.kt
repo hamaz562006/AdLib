@@ -9,20 +9,21 @@ import androidx.fragment.app.FragmentManager
 import com.tqhit.adlib.sdk.adjust.AdjustAnalyticsHelper
 import com.tqhit.adlib.sdk.ads.admob.AdmobHelper
 import com.tqhit.adlib.sdk.ads.admob.AppOpenHelper
-import com.tqhit.adlib.sdk.ads.applovin.ApplovinHelper
-import com.tqhit.adlib.sdk.ads.applovin.MaxAppOpenHelper
+import com.tqhit.adlib.sdk.ads.house.HouseAdHelper
+import com.tqhit.adlib.sdk.ads.house.HouseAppOpenHelper
 import com.tqhit.adlib.sdk.ads.loader.ActivityAdLoader
 import com.tqhit.adlib.sdk.analytics.AnalyticsTracker
 import com.tqhit.adlib.sdk.base.AdLibBaseApplication
 import com.tqhit.adlib.sdk.firebase.FirebaseRemoteConfigHelper
+import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
-// @HiltAndroidApp
+@HiltAndroidApp
 open class AdLibHiltApplication : AdLibBaseApplication() {
     protected val APP_AOA_CONFIG_KEY = "APP_AOA"
 
     @Inject lateinit var admobHelper: AdmobHelper
-    @Inject lateinit var applovinHelper: ApplovinHelper
+    @Inject lateinit var houseAdHelper: HouseAdHelper
     @Inject lateinit var analyticsTracker: AnalyticsTracker
     @Inject lateinit var adjustAnalyticsHelper: AdjustAnalyticsHelper
     @Inject lateinit var remoteConfigHelper: FirebaseRemoteConfigHelper
@@ -43,23 +44,15 @@ open class AdLibHiltApplication : AdLibBaseApplication() {
 
     fun initAOA() {
         val adConfig = activityAdLoader.getAdConfig(APP_AOA_CONFIG_KEY)
-        val useMax = adConfig?.useMax ?: false
+        val useHouseAd = adConfig?.useHouseAd ?: false
         val customId = adConfig?.customId
-        
-        val adUnitId = if (!customId.isNullOrBlank()) {
-            customId
-        } else {
-            if (useMax) {
-                remoteConfigHelper.getString(ActivityAdLoader.RC_MAX_AOA_AD_UNIT_ID)
+
+        if (!useHouseAd) {
+            val adUnitId = if (!customId.isNullOrBlank()) {
+                customId
             } else {
                 remoteConfigHelper.getString(ActivityAdLoader.RC_AOA_AD_UNIT_ID)
             }
-        }
-
-        if (useMax) {
-            applovinHelper.setAppOpenAdUnitId(adUnitId)
-            applovinHelper.loadAOA(applicationContext)
-        } else {
             admobHelper.setAppOpenAdUnitId(adUnitId)
             admobHelper.loadAOA(applicationContext)
         }
@@ -71,12 +64,12 @@ open class AdLibHiltApplication : AdLibBaseApplication() {
         if (currentActivity == null) return
 
         val adConfig = activityAdLoader.getAdConfig(APP_AOA_CONFIG_KEY)
-        val useMax = adConfig?.useMax ?: false
+        val useHouseAd = adConfig?.useHouseAd ?: false
 
-        if (useMax) {
-            applovinHelper.showAOA(
+        if (useHouseAd) {
+            houseAdHelper.showAppOpen(
                 currentActivity!!,
-                object : MaxAppOpenHelper.OnShowAdCompleteListener {
+                object : HouseAppOpenHelper.OnShowAdCompleteListener {
                     override fun onShowAdComplete() {}
                 }
             )

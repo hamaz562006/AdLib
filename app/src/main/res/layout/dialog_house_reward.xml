@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0F172A"
+    android:padding="20dp">
+
+    <!-- Top Bar with Reward Indicator & Timer -->
+    <TextView
+        android:id="@+id/tvRewardBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="#10B981"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="4dp"
+        android:text="🎁 REWARD AD"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/tvRewardTimer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_chip"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="4dp"
+        android:text="Reward in 5s"
+        android:textColor="#FBBF24"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toStartOf="@id/ivRewardClose"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_marginEnd="8dp" />
+
+    <ImageView
+        android:id="@+id/ivRewardClose"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:padding="6dp"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="#FFFFFF"
+        android:contentDescription="Close" />
+
+    <!-- Center Interactive Video Card / Promo Canvas -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cvRewardMedia"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginVertical="16dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="6dp"
+        app:layout_constraintBottom_toTopOf="@id/ivRewardAdIcon"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvRewardTimer">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#1E293B">
+
+            <ImageView
+                android:id="@+id/ivRewardMediaImage"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ads_icon"
+                android:contentDescription="Media" />
+
+            <ProgressBar
+                android:id="@+id/pbRewardProgress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="6dp"
+                android:layout_alignParentBottom="true"
+                android:max="100"
+                android:progress="0"
+                android:progressTint="#10B981" />
+        </RelativeLayout>
+    </androidx.cardview.widget.CardView>
+
+    <!-- Bottom App Info & CTA -->
+    <ImageView
+        android:id="@+id/ivRewardAdIcon"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_marginBottom="12dp"
+        android:src="@drawable/ads_icon"
+        app:layout_constraintBottom_toTopOf="@id/tvRewardAdDesc"
+        app:layout_constraintStart_toStartOf="parent"
+        android:contentDescription="App Icon" />
+
+    <TextView
+        android:id="@+id/tvRewardAdTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="Special Promotion: Earn Rewards"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/ivRewardAdIcon"
+        app:layout_constraintTop_toTopOf="@id/ivRewardAdIcon" />
+
+    <TextView
+        android:id="@+id/tvRewardValue"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="2dp"
+        android:text="🎁 Claim +20 Free Tokens"
+        android:textColor="#34D399"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/ivRewardAdIcon"
+        app:layout_constraintTop_toBottomOf="@id/tvRewardAdTitle" />
+
+    <TextView
+        android:id="@+id/tvRewardAdDesc"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:text="Watch to the end to claim your reward items immediately."
+        android:textColor="#94A3B8"
+        android:textSize="13sp"
+        app:layout_constraintBottom_toTopOf="@id/btnRewardAdCta"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnRewardAdCta"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:backgroundTint="#10B981"
+        android:text="Download &amp; Play"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:cornerRadius="26dp"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

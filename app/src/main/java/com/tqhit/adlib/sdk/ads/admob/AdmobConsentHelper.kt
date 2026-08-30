@@ -34,6 +34,10 @@ class AdmobConsentHelper @Inject constructor(
         UserMessagingPlatform.showPrivacyOptionsForm(activity, onConsentFormDismissedListener)
     }
 
+    fun resetConsent() {
+        consentInformation.reset()
+    }
+
     fun gatherConsent(
         activity: Activity,
         consentCallback: IAdmobConsentCallback,

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/houseNativeFullRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_border_native"
+    android:padding="12dp">
+
+    <!-- Top Row: Icon + Title + Ad Badge -->
+    <ImageView
+        android:id="@+id/ivHouseNativeFullIcon"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:src="@drawable/ads_icon"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:contentDescription="Icon" />
+
+    <TextView
+        android:id="@+id/tvHouseNativeFullBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:background="#FF9800"
+        android:paddingHorizontal="4dp"
+        android:paddingVertical="1dp"
+        android:text="AD"
+        android:textColor="#FFFFFF"
+        android:textSize="9sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toEndOf="@id/ivHouseNativeFullIcon"
+        app:layout_constraintTop_toTopOf="@id/ivHouseNativeFullIcon" />
+
+    <TextView
+        android:id="@+id/tvHouseNativeFullTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="6dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="Fast Optimizer &amp; Cleaner"
+        android:textColor="@color/black"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="@id/tvHouseNativeFullBadge"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/tvHouseNativeFullBadge"
+        app:layout_constraintTop_toTopOf="@id/tvHouseNativeFullBadge" />
+
+    <TextView
+        android:id="@+id/tvHouseNativeFullDesc"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="2dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="Boost performance and free up storage easily."
+        android:textColor="#757575"
+        android:textSize="11sp"
+        app:layout_constraintBottom_toBottomOf="@id/ivHouseNativeFullIcon"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/ivHouseNativeFullIcon"
+        app:layout_constraintTop_toBottomOf="@id/tvHouseNativeFullTitle" />
+
+    <!-- Media / Image View -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cvHouseNativeFullMedia"
+        android:layout_width="match_parent"
+        android:layout_height="140dp"
+        android:layout_marginTop="10dp"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="0dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ivHouseNativeFullIcon">
+
+        <ImageView
+            android:id="@+id/ivHouseNativeFullMedia"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#F1F5F9"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ads_icon"
+            android:contentDescription="Media" />
+    </androidx.cardview.widget.CardView>
+
+    <!-- Bottom CTA Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnHouseNativeFullCta"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:layout_marginTop="10dp"
+        android:backgroundTint="#2563EB"
+        android:text="Download Free"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        app:cornerRadius="22dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/cvHouseNativeFullMedia" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

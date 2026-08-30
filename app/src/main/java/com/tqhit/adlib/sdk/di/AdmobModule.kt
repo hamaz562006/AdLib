@@ -2,6 +2,8 @@ package com.tqhit.adlib.sdk.di
 
 import android.content.Context
 import com.tqhit.adlib.sdk.ads.AdFrequencyManager
+import com.tqhit.adlib.sdk.ads.admob.AdaptiveBannerHelper
+import com.tqhit.adlib.sdk.ads.cache.AdCacheManager
 import com.tqhit.adlib.sdk.ads.admob.AdmobConsentHelper
 import com.tqhit.adlib.sdk.ads.admob.AdmobHelper
 import com.tqhit.adlib.sdk.ads.admob.AppOpenHelper
@@ -22,6 +24,21 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AdmobModule {
+
+    @Provides
+    @Singleton
+    fun provideAdCacheManager(): AdCacheManager {
+        return AdCacheManager()
+    }
+
+    @Provides
+    @Singleton
+    fun provideAdaptiveBannerHelper(
+        preferencesHelper: PreferencesHelper,
+        remoteConfigHelper: FirebaseRemoteConfigHelper
+    ): AdaptiveBannerHelper {
+        return AdaptiveBannerHelper(preferencesHelper, remoteConfigHelper)
+    }
 
     @Provides
     @Singleton

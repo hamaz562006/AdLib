@@ -1,3 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<defaults>
-</defaults>
+<defaultsMap>
+    <entry>
+        <key>bn_enable</key>
+        <value>true</value>
+    </entry>
+    <entry>
+        <key>iv_enable</key>
+        <value>true</value>
+    </entry>
+    <entry>
+        <key>nt_enable</key>
+        <value>true</value>
+    </entry>
+    <entry>
+        <key>rv_enable</key>
+        <value>true</value>
+    </entry>
+    <entry>
+        <key>aoa_enable</key>
+        <value>true</value>
+    </entry>
+    <entry>
+        <key>RC_IV_SHOW_FREQUENCY</key>
+        <value>0</value>
+    </entry>
+    <entry>
+        <key>RC_IV_DELAY_SHOW_AFTER_RV</key>
+        <value>0</value>
+    </entry>
+    <entry>
+        <key>RC_AOA_SHOW_FREQUENCY</key>
+        <value>0</value>
+    </entry>
+    <entry>
+        <key>RC_ENABLE_ACTIVITY_AD_LOADER</key>
+        <value>true</value>
+    </entry>
+    <entry>
+        <key>RC_AOA_AD_UNIT_ID</key>
+        <value>ca-app-pub-3940256099942544/9257395921</value>
+    </entry>
+</defaultsMap>

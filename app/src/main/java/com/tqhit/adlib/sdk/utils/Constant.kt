@@ -10,10 +10,8 @@ object Constant {
     const val ADMOB_NATIVE_AD_UNIT_ID = "ca-app-pub-3940256099942544/2247696110"
     const val ADMOB_AOA_AD_UNIT_ID = "ca-app-pub-3940256099942544/9257395921"
 
-    // AppLovin MAX sample/test unit ids (replace in production)
-    const val MAX_BANNER_AD_UNIT_ID = "YOUR_MAX_BANNER_AD_UNIT_ID"
-    const val MAX_INTERSTITIAL_AD_UNIT_ID = "YOUR_MAX_INTERSTITIAL_AD_UNIT_ID"
-    const val MAX_REWARDED_AD_UNIT_ID = "YOUR_MAX_REWARDED_AD_UNIT_ID"
-    const val MAX_NATIVE_AD_UNIT_ID = "YOUR_MAX_NATIVE_AD_UNIT_ID"
-    const val MAX_AOA_AD_UNIT_ID = "YOUR_MAX_APP_OPEN_AD_UNIT_ID"
+    // House Ads Configuration Keys
+    const val RC_HOUSE_ADS_ENABLED = "house_ads_enabled"
+    const val RC_HOUSE_ADS_AUTO_FALLBACK = "house_ads_auto_fallback"
+    const val RC_HOUSE_ADS_JSON = "house_ads_json"
 }

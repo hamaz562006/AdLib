@@ -4,6 +4,9 @@ import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
+import com.bumptech.glide.Glide
+import com.tqhit.adlib.R
 import com.tqhit.adlib.databinding.LayoutHouseNativeBotBinding
 import com.tqhit.adlib.databinding.LayoutHouseNativeFullBinding
 import com.tqhit.adlib.sdk.ads.callback.house.HouseNativeAdCallback
@@ -34,6 +37,8 @@ class HouseNativeHelper @Inject constructor(
         binding.tvHouseNativeTitle.text = adItem.title
         binding.tvHouseNativeDesc.text = adItem.description
         binding.btnHouseNativeCta.text = adItem.ctaText
+
+        loadImage(context, adItem.iconUrl, adItem.iconResName, binding.ivHouseNativeIcon)
 
         val clickListener = View.OnClickListener {
             houseAdManager.recordClick(context, adItem)
@@ -70,6 +75,9 @@ class HouseNativeHelper @Inject constructor(
         binding.tvHouseNativeFullDesc.text = adItem.description
         binding.btnHouseNativeFullCta.text = adItem.ctaText
 
+        loadImage(context, adItem.iconUrl, adItem.iconResName, binding.ivHouseNativeFullIcon)
+        loadImage(context, adItem.mediaUrl, adItem.mediaResName, binding.ivHouseNativeFullMedia)
+
         val clickListener = View.OnClickListener {
             houseAdManager.recordClick(context, adItem)
             callback?.onAdClicked()
@@ -86,5 +94,20 @@ class HouseNativeHelper @Inject constructor(
         callback?.onAdImpression()
 
         return binding.root
+    }
+
+    private fun loadImage(context: Context, url: String?, resName: String?, imageView: ImageView) {
+        if (!url.isNullOrBlank()) {
+            Glide.with(context)
+                .load(url)
+                .placeholder(R.drawable.ads_icon)
+                .error(R.drawable.ads_icon)
+                .into(imageView)
+        } else if (!resName.isNullOrBlank()) {
+            val resId = context.resources.getIdentifier(resName, "drawable", context.packageName)
+            if (resId != 0) imageView.setImageResource(resId) else imageView.setImageResource(R.drawable.ads_icon)
+        } else {
+            imageView.setImageResource(R.drawable.ads_icon)
+        }
     }
 }

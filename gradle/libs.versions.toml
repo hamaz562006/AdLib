@@ -27,6 +27,7 @@ firebaseCrashlytics = "19.4.0"
 googleFirebaseCrashlytics = "3.0.3"
 firebaseConfig = "22.1.0"
 playServicesAds = "23.6.0"
+glide = "4.16.0"
 
 [libraries]
 adjust-android = { module = "com.adjust.sdk:adjust-android", version.ref = "adjustAndroid" }
@@ -54,6 +55,7 @@ firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics
 firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics", version.ref = "firebaseCrashlytics" }
 firebase-config = { group = "com.google.firebase", name = "firebase-config", version.ref = "firebaseConfig" }
 play-services-ads = { group = "com.google.android.gms", name = "play-services-ads", version.ref = "playServicesAds" }
+glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -84,6 +84,7 @@ dependencies {
     kapt(libs.hilt.android.compiler)
     implementation(libs.customactivityoncrash)
     implementation(libs.gson)
+    implementation(libs.glide)
     implementation(libs.ssp.android)
     implementation(libs.sdp.android)
     implementation(libs.androidx.lifecycle.process)

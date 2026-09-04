@@ -8,6 +8,9 @@ import android.os.CountDownTimer
 import android.view.LayoutInflater
 import android.view.Window
 import android.view.WindowManager
+import android.widget.ImageView
+import com.bumptech.glide.Glide
+import com.tqhit.adlib.R
 import com.tqhit.adlib.databinding.DialogHouseInterstitialBinding
 import com.tqhit.adlib.sdk.ads.AdFrequencyManager
 import com.tqhit.adlib.sdk.ads.callback.house.HouseInterstitialAdCallback
@@ -55,6 +58,9 @@ class HouseInterstitialHelper @Inject constructor(
         binding.btnHouseAdCta.text = adItem.ctaText
         binding.tvHouseAdRating.text = "★ ${adItem.rating} • Free Download"
 
+        loadImage(activity, adItem.iconUrl, adItem.iconResName, binding.ivHouseAdIcon)
+        loadImage(activity, adItem.mediaUrl, adItem.mediaResName, binding.ivHouseMediaImage)
+
         var countDownTimer: CountDownTimer? = null
 
         // 3 seconds countdown skip timer
@@ -100,6 +106,21 @@ class HouseInterstitialHelper @Inject constructor(
             callback?.onAdImpression()
         } catch (e: Exception) {
             callback?.onAdFailedToLoad(e.message ?: "Failed to show dialog")
+        }
+    }
+
+    private fun loadImage(activity: Activity, url: String?, resName: String?, imageView: ImageView) {
+        if (!url.isNullOrBlank()) {
+            Glide.with(activity)
+                .load(url)
+                .placeholder(R.drawable.ads_icon)
+                .error(R.drawable.ads_icon)
+                .into(imageView)
+        } else if (!resName.isNullOrBlank()) {
+            val resId = activity.resources.getIdentifier(resName, "drawable", activity.packageName)
+            if (resId != 0) imageView.setImageResource(resId) else imageView.setImageResource(R.drawable.ads_icon)
+        } else {
+            imageView.setImageResource(R.drawable.ads_icon)
         }
     }
 }

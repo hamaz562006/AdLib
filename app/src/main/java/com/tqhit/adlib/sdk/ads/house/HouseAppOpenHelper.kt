@@ -8,6 +8,9 @@ import android.os.CountDownTimer
 import android.view.LayoutInflater
 import android.view.Window
 import android.view.WindowManager
+import android.widget.ImageView
+import com.bumptech.glide.Glide
+import com.tqhit.adlib.R
 import com.tqhit.adlib.databinding.DialogHouseAppOpenBinding
 import com.tqhit.adlib.sdk.ads.AdFrequencyManager
 import com.tqhit.adlib.sdk.ads.callback.house.HouseAppOpenAdCallback
@@ -61,6 +64,9 @@ class HouseAppOpenHelper @Inject constructor(
         binding.tvHouseAoaDesc.text = adItem.description
         binding.btnHouseAoaCta.text = adItem.ctaText
 
+        loadImage(activity, adItem.iconUrl, adItem.iconResName, binding.ivHouseAoaIcon)
+        loadImage(activity, adItem.mediaUrl, adItem.mediaResName, binding.ivHouseAoaMedia)
+
         var countDownTimer: CountDownTimer? = null
 
         countDownTimer = object : CountDownTimer(3000, 1000) {
@@ -102,6 +108,21 @@ class HouseAppOpenHelper @Inject constructor(
         } catch (e: Exception) {
             onShowAdCompleteListener?.onShowAdComplete()
             callback?.onAdFailedToLoad(e.message ?: "Failed to show house open ad")
+        }
+    }
+
+    private fun loadImage(activity: Activity, url: String?, resName: String?, imageView: ImageView) {
+        if (!url.isNullOrBlank()) {
+            Glide.with(activity)
+                .load(url)
+                .placeholder(R.drawable.ads_icon)
+                .error(R.drawable.ads_icon)
+                .into(imageView)
+        } else if (!resName.isNullOrBlank()) {
+            val resId = activity.resources.getIdentifier(resName, "drawable", activity.packageName)
+            if (resId != 0) imageView.setImageResource(resId) else imageView.setImageResource(R.drawable.ads_icon)
+        } else {
+            imageView.setImageResource(R.drawable.ads_icon)
         }
     }
 }

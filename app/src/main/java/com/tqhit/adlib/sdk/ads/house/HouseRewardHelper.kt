@@ -9,6 +9,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.Window
 import android.view.WindowManager
+import android.widget.ImageView
+import com.bumptech.glide.Glide
+import com.tqhit.adlib.R
 import com.tqhit.adlib.databinding.DialogHouseRewardBinding
 import com.tqhit.adlib.sdk.ads.AdFrequencyManager
 import com.tqhit.adlib.sdk.ads.callback.house.HouseRewardAdCallback
@@ -52,6 +55,9 @@ class HouseRewardHelper @Inject constructor(
         binding.tvRewardAdDesc.text = adItem.description
         binding.btnRewardAdCta.text = adItem.ctaText
         binding.tvRewardValue.text = "🎁 Claim +${adItem.rewardAmount} ${adItem.rewardType}"
+
+        loadImage(activity, adItem.iconUrl, adItem.iconResName, binding.ivRewardAdIcon)
+        loadImage(activity, adItem.mediaUrl, adItem.mediaResName, binding.ivRewardMediaImage)
 
         val totalDurationSeconds = adItem.countdownSeconds.coerceAtLeast(4)
         var userEarnedReward = false
@@ -103,6 +109,21 @@ class HouseRewardHelper @Inject constructor(
             callback?.onAdImpression()
         } catch (e: Exception) {
             callback?.onAdFailedToLoad(e.message ?: "Failed to display reward ad")
+        }
+    }
+
+    private fun loadImage(activity: Activity, url: String?, resName: String?, imageView: ImageView) {
+        if (!url.isNullOrBlank()) {
+            Glide.with(activity)
+                .load(url)
+                .placeholder(R.drawable.ads_icon)
+                .error(R.drawable.ads_icon)
+                .into(imageView)
+        } else if (!resName.isNullOrBlank()) {
+            val resId = activity.resources.getIdentifier(resName, "drawable", activity.packageName)
+            if (resId != 0) imageView.setImageResource(resId) else imageView.setImageResource(R.drawable.ads_icon)
+        } else {
+            imageView.setImageResource(R.drawable.ads_icon)
         }
     }
 }

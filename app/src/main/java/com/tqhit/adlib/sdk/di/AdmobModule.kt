@@ -12,6 +12,9 @@ import com.tqhit.adlib.sdk.ads.admob.BannerHelper
 import com.tqhit.adlib.sdk.ads.admob.InterstitialHelper
 import com.tqhit.adlib.sdk.ads.admob.NativeHelper
 import com.tqhit.adlib.sdk.ads.admob.RewardHelper
+import com.tqhit.adlib.sdk.ads.house.HouseAppOpenHelper
+import com.tqhit.adlib.sdk.ads.house.HouseInterstitialHelper
+import com.tqhit.adlib.sdk.ads.house.HouseRewardHelper
 import com.tqhit.adlib.sdk.analytics.AnalyticsTracker
 import com.tqhit.adlib.sdk.data.local.PreferencesHelper
 import com.tqhit.adlib.sdk.firebase.FirebaseRemoteConfigHelper
@@ -85,9 +88,10 @@ object AdmobModule {
         remoteConfigHelper: FirebaseRemoteConfigHelper,
         preferencesHelper: PreferencesHelper,
         adFrequencyManager: AdFrequencyManager,
-        adMobRateLimiter: AdmobRateLimiter
+        adMobRateLimiter: AdmobRateLimiter,
+        houseInterstitialHelper: HouseInterstitialHelper
     ): InterstitialHelper {
-        return InterstitialHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper, adFrequencyManager, adMobRateLimiter)
+        return InterstitialHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper, adFrequencyManager, adMobRateLimiter, houseInterstitialHelper)
     }
 
     @Provides
@@ -109,9 +113,10 @@ object AdmobModule {
         remoteConfigHelper: FirebaseRemoteConfigHelper,
         preferencesHelper: PreferencesHelper,
         adFrequencyManager: AdFrequencyManager,
-        adMobRateLimiter: AdmobRateLimiter
+        adMobRateLimiter: AdmobRateLimiter,
+        houseRewardHelper: HouseRewardHelper
     ): RewardHelper {
-        return RewardHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper, adFrequencyManager, adMobRateLimiter)
+        return RewardHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper, adFrequencyManager, adMobRateLimiter, houseRewardHelper)
     }
 
     @Provides
@@ -122,8 +127,9 @@ object AdmobModule {
         remoteConfigHelper: FirebaseRemoteConfigHelper,
         preferencesHelper: PreferencesHelper,
         adFrequencyManager: AdFrequencyManager,
-        adMobRateLimiter: AdmobRateLimiter
+        adMobRateLimiter: AdmobRateLimiter,
+        houseAppOpenHelper: HouseAppOpenHelper
     ): AppOpenHelper {
-        return AppOpenHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper, adFrequencyManager, adMobRateLimiter)
+        return AppOpenHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper, adFrequencyManager, adMobRateLimiter, houseAppOpenHelper)
     }
 }

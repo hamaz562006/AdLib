@@ -12,11 +12,14 @@ import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.tqhit.adlib.sdk.ads.AdFrequencyManager
 import com.tqhit.adlib.sdk.ads.callback.admob.InterstitialAdCallback
+import com.tqhit.adlib.sdk.ads.callback.house.HouseInterstitialAdCallback
+import com.tqhit.adlib.sdk.ads.house.HouseInterstitialHelper
 import com.tqhit.adlib.sdk.analytics.AnalyticsTracker
 import com.tqhit.adlib.sdk.data.local.PreferencesHelper
 import com.tqhit.adlib.sdk.firebase.FirebaseRemoteConfigHelper
 import com.tqhit.adlib.sdk.ui.dialog.LoadingAdsDialog
 import com.tqhit.adlib.sdk.utils.Constant
+import com.tqhit.adlib.sdk.utils.NetworkUtils
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.getValue
@@ -28,13 +31,39 @@ class InterstitialHelper @Inject constructor(
     private val remoteConfigHelper: FirebaseRemoteConfigHelper,
     private val preferencesHelper: PreferencesHelper,
     private val adFrequencyManager: AdFrequencyManager,
-    private val adMobRateLimiter: AdmobRateLimiter
+    private val adMobRateLimiter: AdmobRateLimiter,
+    private val houseInterstitialHelper: HouseInterstitialHelper
 ) {
     private val TAG = InterstitialHelper::class.java.simpleName
     private fun isAdEnabled() =
         remoteConfigHelper.getBoolean("iv_enable")
                 && !preferencesHelper.getBoolean(Constant.IS_PREMIUM, false)
-    
+
+    private fun isHouseAdsEnabled() =
+        remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)
+
+    private fun isHouseAutoFallback() =
+        remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_AUTO_FALLBACK)
+
+    private fun createBridgedHouseCallback(adCallback: InterstitialAdCallback?): HouseInterstitialAdCallback {
+        return object : HouseInterstitialAdCallback() {
+            override fun onAdImpression() {
+                adCallback?.onAdImpression()
+            }
+
+            override fun onAdClicked() {
+                adCallback?.onAdClicked()
+            }
+
+            override fun onAdClosed() {
+                adCallback?.onAdClosed()
+            }
+
+            override fun onAdFailedToLoad(errorMessage: String) {
+                adCallback?.onAdFailedToLoad(null)
+            }
+        }
+    }
 
     private fun getAdRequest(timeout: Int = 60000): AdRequest {
         return AdRequest.Builder().setHttpTimeoutMillis(timeout).build()
@@ -47,14 +76,28 @@ class InterstitialHelper @Inject constructor(
         timeoutMilliSecond: Int?,
         adCallback: InterstitialAdCallback?
     ) {
+        // If device is offline and House Ads are enabled, show House Interstitial immediately
+        if (!NetworkUtils.isNetworkAvailable(activity) && isHouseAdsEnabled()) {
+            houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback))
+            return
+        }
+
         if (!isAdEnabled() || !admobConsentHelper.canRequestAds()) {
-            adCallback?.onAdClosed()
+            if (isHouseAdsEnabled()) {
+                houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback))
+            } else {
+                adCallback?.onAdClosed()
+            }
             return
         }
         
-        // Check frequency and delay rules
+        // Check frequency and delay rules: fallback to House ad if blocked
         if (!adFrequencyManager.canShowInterstitial()) {
-            adCallback?.onAdClosed()
+            if (isHouseAdsEnabled()) {
+                houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
+            } else {
+                adCallback?.onAdClosed()
+            }
             return
         }
         
@@ -71,10 +114,25 @@ class InterstitialHelper @Inject constructor(
                 }
 
                 override fun onAdFailedToLoad(adError: LoadAdError?) {
-                    adCallback?.onAdFailedToLoad(adError)
-                    adCallback?.onAdClosed()
                     if (loadingAdsDialog.isShowing) {
                         loadingAdsDialog.dismiss()
+                    }
+                    if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
+                        houseInterstitialHelper.showHouseInterstitial(
+                            activity,
+                            object : HouseInterstitialAdCallback() {
+                                override fun onAdImpression() { adCallback?.onAdImpression() }
+                                override fun onAdClicked() { adCallback?.onAdClicked() }
+                                override fun onAdClosed() { adCallback?.onAdClosed() }
+                                override fun onAdFailedToLoad(errorMessage: String) {
+                                    adCallback?.onAdFailedToLoad(adError)
+                                    adCallback?.onAdClosed()
+                                }
+                            }
+                        )
+                    } else {
+                        adCallback?.onAdFailedToLoad(adError)
+                        adCallback?.onAdClosed()
                     }
                 }
             })
@@ -90,13 +148,21 @@ class InterstitialHelper @Inject constructor(
         adCallback: InterstitialAdCallback?
     ) {
         if (!isAdEnabled() || !admobConsentHelper.canRequestAds()) {
-            adCallback?.onAdClosed()
+            if (isHouseAdsEnabled()) {
+                houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback))
+            } else {
+                adCallback?.onAdClosed()
+            }
             return
         }
         
-        // Check frequency and delay rules
+        // Check frequency and delay rules: fallback to House ad if blocked
         if (!adFrequencyManager.canShowInterstitial()) {
-            adCallback?.onAdClosed()
+            if (isHouseAdsEnabled()) {
+                houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
+            } else {
+                adCallback?.onAdClosed()
+            }
             return
         }
         
@@ -121,7 +187,11 @@ class InterstitialHelper @Inject constructor(
 
                 override fun onAdFailedToShowFullScreenContent(p0: AdError) {
                     super.onAdFailedToShowFullScreenContent(p0)
-                    adCallback?.onAdClosed()
+                    if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
+                        houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback))
+                    } else {
+                        adCallback?.onAdClosed()
+                    }
                     analyticsTracker.logEvent("aj_inters_show_fail")
                 }
 
@@ -152,6 +222,11 @@ class InterstitialHelper @Inject constructor(
         timeoutMilliSecond: Int?,
         adCallback: InterstitialAdCallback?
     ) {
+        if (!NetworkUtils.isNetworkAvailable(context)) {
+            adCallback?.onAdFailedToLoad(null)
+            return
+        }
+
         if (!isAdEnabled() || !admobConsentHelper.canRequestAds()) {
             adCallback?.onAdFailedToLoad(null)
             return

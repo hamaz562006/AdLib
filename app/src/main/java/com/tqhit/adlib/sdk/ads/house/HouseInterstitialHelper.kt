@@ -28,14 +28,15 @@ class HouseInterstitialHelper @Inject constructor(
 ) {
     fun showHouseInterstitial(
         activity: Activity,
-        callback: HouseInterstitialAdCallback? = null
+        callback: HouseInterstitialAdCallback? = null,
+        ignoreFrequencyCheck: Boolean = false
     ) {
         if (preferencesHelper.getBoolean(Constant.IS_PREMIUM, false)) {
             callback?.onAdFailedToLoad("User is premium")
             return
         }
 
-        if (!adFrequencyManager.canShowInterstitial()) {
+        if (!ignoreFrequencyCheck && !adFrequencyManager.canShowInterstitial()) {
             callback?.onAdFailedToLoad("Frequency limit reached")
             return
         }

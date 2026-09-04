@@ -13,11 +13,14 @@ import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.tqhit.adlib.sdk.ads.AdFrequencyManager
 import com.tqhit.adlib.sdk.ads.callback.admob.RewardAdCallback
+import com.tqhit.adlib.sdk.ads.callback.house.HouseRewardAdCallback
+import com.tqhit.adlib.sdk.ads.house.HouseRewardHelper
 import com.tqhit.adlib.sdk.analytics.AnalyticsTracker
 import com.tqhit.adlib.sdk.data.local.PreferencesHelper
 import com.tqhit.adlib.sdk.firebase.FirebaseRemoteConfigHelper
 import com.tqhit.adlib.sdk.ui.dialog.LoadingAdsDialog
 import com.tqhit.adlib.sdk.utils.Constant
+import com.tqhit.adlib.sdk.utils.NetworkUtils
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -28,13 +31,46 @@ class RewardHelper @Inject constructor(
     private val remoteConfigHelper: FirebaseRemoteConfigHelper,
     private val preferencesHelper: PreferencesHelper,
     private val adFrequencyManager: AdFrequencyManager,
-    private val adMobRateLimiter: AdmobRateLimiter
+    private val adMobRateLimiter: AdmobRateLimiter,
+    private val houseRewardHelper: HouseRewardHelper
 ) {
     private val TAG = RewardHelper::class.java.simpleName
     private fun isAdEnabled() =
         remoteConfigHelper.getBoolean("rv_enable")
                 && !preferencesHelper.getBoolean(Constant.IS_PREMIUM, false)
-    
+
+    private fun isHouseAdsEnabled() =
+        remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)
+
+    private fun isHouseAutoFallback() =
+        remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_AUTO_FALLBACK)
+
+    private fun createBridgedHouseCallback(adCallback: RewardAdCallback?): HouseRewardAdCallback {
+        return object : HouseRewardAdCallback() {
+            override fun onAdImpression() {
+                adCallback?.onAdImpression()
+            }
+
+            override fun onAdClicked() {
+                adCallback?.onAdClicked()
+            }
+
+            override fun onAdClosed() {
+                adCallback?.onAdClosed()
+            }
+
+            override fun onAdFailedToLoad(errorMessage: String) {
+                adCallback?.onAdFailedToLoad(null)
+            }
+
+            override fun onUserEarnedReward(rewardAmount: Int, rewardType: String) {
+                // Call standard Google reward item callback with null since RewardItem cannot be mocked
+                adCallback?.onUserEarnedReward(null)
+                // Also call the dedicated hook for house reward
+                adCallback?.onHouseRewardEarned(rewardAmount, rewardType)
+            }
+        }
+    }
 
     private fun getAdRequest(timeout: Int = 60000): AdRequest {
         return AdRequest.Builder().setHttpTimeoutMillis(timeout).build()
@@ -47,8 +83,18 @@ class RewardHelper @Inject constructor(
         timeOutMilliSecond: Int?,
         adCallback: RewardAdCallback?
     ) {
+        // If device is offline and House Ads are enabled, show House Reward immediately
+        if (!NetworkUtils.isNetworkAvailable(activity) && isHouseAdsEnabled()) {
+            houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback))
+            return
+        }
+
         if (!isAdEnabled() || !admobConsentHelper.canRequestAds()) {
-            adCallback?.onAdFailedToLoad()
+            if (isHouseAdsEnabled()) {
+                houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback))
+            } else {
+                adCallback?.onAdFailedToLoad()
+            }
             return
         }
 
@@ -65,9 +111,27 @@ class RewardHelper @Inject constructor(
                 }
 
                 override fun onAdFailedToLoad(adError: LoadAdError?) {
-                    adCallback?.onAdFailedToLoad(adError)
                     if (loadingAdsDialog.isShowing) {
                         loadingAdsDialog.dismiss()
+                    }
+                    if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
+                        houseRewardHelper.showHouseReward(
+                            activity,
+                            object : HouseRewardAdCallback() {
+                                override fun onAdImpression() { adCallback?.onAdImpression() }
+                                override fun onAdClicked() { adCallback?.onAdClicked() }
+                                override fun onAdClosed() { adCallback?.onAdClosed() }
+                                override fun onUserEarnedReward(rewardAmount: Int, rewardType: String) {
+                                    adCallback?.onUserEarnedReward(null)
+                                    adCallback?.onHouseRewardEarned(rewardAmount, rewardType)
+                                }
+                                override fun onAdFailedToLoad(errorMessage: String) {
+                                    adCallback?.onAdFailedToLoad(adError)
+                                }
+                            }
+                        )
+                    } else {
+                        adCallback?.onAdFailedToLoad(adError)
                     }
                 }
             })
@@ -82,6 +146,15 @@ class RewardHelper @Inject constructor(
         rewardedAd: RewardedAd,
         adCallback: RewardAdCallback?
     ) {
+        if (!isAdEnabled() || !admobConsentHelper.canRequestAds()) {
+            if (isHouseAdsEnabled()) {
+                houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback))
+            } else {
+                adCallback?.onAdFailedToLoad()
+            }
+            return
+        }
+
         analyticsTracker.logEvent("aj_reward_show")
         rewardedAd.apply {
             onPaidEventListener = OnPaidEventListener { adValue: AdValue ->
@@ -103,7 +176,11 @@ class RewardHelper @Inject constructor(
 
                 override fun onAdFailedToShowFullScreenContent(var0: AdError) {
                     super.onAdFailedToShowFullScreenContent(var0)
-                    adCallback?.onAdFailedToShowFullScreenContent(var0)
+                    if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
+                        houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback))
+                    } else {
+                        adCallback?.onAdFailedToShowFullScreenContent(var0)
+                    }
                     analyticsTracker.logEvent("aj_reward_show_fail")
                 }
 
@@ -136,6 +213,11 @@ class RewardHelper @Inject constructor(
         timeOutMilliSecond: Int?,
         adCallback: RewardAdCallback?
     ) {
+        if (!NetworkUtils.isNetworkAvailable(context)) {
+            adCallback?.onAdFailedToLoad(null)
+            return
+        }
+
         if (!isAdEnabled() || !admobConsentHelper.canRequestAds()) {
             adCallback?.onAdFailedToLoad(null)
             return

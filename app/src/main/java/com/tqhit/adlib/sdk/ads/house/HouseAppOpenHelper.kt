@@ -33,7 +33,8 @@ class HouseAppOpenHelper @Inject constructor(
     fun showHouseAppOpen(
         activity: Activity,
         onShowAdCompleteListener: OnShowAdCompleteListener? = null,
-        callback: HouseAppOpenAdCallback? = null
+        callback: HouseAppOpenAdCallback? = null,
+        ignoreFrequencyCheck: Boolean = false
     ) {
         if (preferencesHelper.getBoolean(Constant.IS_PREMIUM, false)) {
             onShowAdCompleteListener?.onShowAdComplete()
@@ -41,7 +42,7 @@ class HouseAppOpenHelper @Inject constructor(
             return
         }
 
-        if (!adFrequencyManager.canShowAppOpen()) {
+        if (!ignoreFrequencyCheck && !adFrequencyManager.canShowAppOpen()) {
             onShowAdCompleteListener?.onShowAdComplete()
             callback?.onAdFailedToLoad("Frequency limit reached")
             return

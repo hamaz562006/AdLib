@@ -9,6 +9,7 @@ import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.rewarded.RewardedAd
+import com.tqhit.adlib.sdk.ads.AdFrequencyManager
 import com.tqhit.adlib.sdk.ads.admob.AdmobHelper
 import com.tqhit.adlib.sdk.ads.callback.admob.BannerAdCallback
 import com.tqhit.adlib.sdk.ads.callback.admob.InterstitialAdCallback
@@ -32,7 +33,8 @@ class ActivityAdLoader @Inject constructor(
     private val remoteConfigHelper: FirebaseRemoteConfigHelper,
     private val admobHelper: AdmobHelper,
     private val houseAdHelper: HouseAdHelper,
-    private val houseAdManager: HouseAdManager
+    private val houseAdManager: HouseAdManager,
+    private val adFrequencyManager: AdFrequencyManager
 ) {
     private val loadedAdsLiveData = mutableMapOf<String, MutableLiveData<Any>>()
     private val adLoadInProgress = mutableSetOf<String>()
@@ -162,9 +164,15 @@ class ActivityAdLoader @Inject constructor(
 
         val adConfig = getAdConfig(adKey) ?: AdConfig()
 
-        if (adConfig.useHouseAd || (!adConfig.useHouseAd && !admobHelper.isNetwork(activity))) {
+        val isFrequencyBlocked = when {
+            adKey.endsWith(INTERSTITIAL_SUFFIX) -> !adFrequencyManager.canShowInterstitial()
+            adKey.endsWith(AOA_SUFFIX) -> !adFrequencyManager.canShowAppOpen()
+            else -> false
+        }
+
+        if (adConfig.useHouseAd || isFrequencyBlocked || (!adConfig.useHouseAd && !admobHelper.isNetwork(activity))) {
             val houseAd = houseAdManager.getNextAd(getHouseTypeForAdKey(adKey))
-            handleAdLoaded(adKey, houseAd, if (adConfig.useHouseAd) "HouseAd" else "HouseAdOfflineFallback", adLiveData)
+            handleAdLoaded(adKey, houseAd, if (adConfig.useHouseAd) "HouseAd" else if (isFrequencyBlocked) "HouseAdFrequencyFallback" else "HouseAdOfflineFallback", adLiveData)
             return
         }
 

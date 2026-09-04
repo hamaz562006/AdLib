@@ -20,6 +20,8 @@ open class RewardAdCallback {
 
     open fun onUserEarnedReward(rewardItem: RewardItem?) {}
 
+    open fun onHouseRewardEarned(amount: Int, type: String) {}
+
     open fun onAdOpened() {}
 
     fun onAdSwipeGestureClicked() {}

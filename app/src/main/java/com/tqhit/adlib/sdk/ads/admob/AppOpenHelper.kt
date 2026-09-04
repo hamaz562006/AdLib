@@ -25,7 +25,8 @@ class AppOpenHelper @Inject constructor(
     private val analyticsTracker: AnalyticsTracker,
     private val remoteConfigHelper: FirebaseRemoteConfigHelper,
     private val preferencesHelper: PreferencesHelper,
-    private val adFrequencyManager: AdFrequencyManager
+    private val adFrequencyManager: AdFrequencyManager,
+    private val adMobRateLimiter: AdmobRateLimiter
 ) {
     private fun isAdEnabled() =
         remoteConfigHelper.getBoolean("aoa_enable")
@@ -51,11 +52,20 @@ class AppOpenHelper @Inject constructor(
         if (!isAdEnabled()) return
         if (!admobConsentHelper.canRequestAds()) return
         if (isLoadingAd || isAdAvailable()) return
+
+        val targetAdUnitId = if (Constant.DEBUG_MODE) Constant.ADMOB_AOA_AD_UNIT_ID else adUnitId
+        if (!adMobRateLimiter.canRequest(targetAdUnitId)) {
+            android.util.Log.w("AppOpenHelper", "AppOpen adUnitId $targetAdUnitId is in NO_FILL cooldown")
+            adLoaded.postValue(false)
+            analyticsTracker.logEvent("aj_app_open_load_fail_cooldown")
+            return
+        }
+
         isLoadingAd = true
         val request = AdRequest.Builder().build()
         analyticsTracker.logEvent("aj_app_open_load")
         AppOpenAd.load(
-            context, if (Constant.DEBUG_MODE) Constant.ADMOB_AOA_AD_UNIT_ID else adUnitId, request,
+            context, targetAdUnitId, request,
             object : AppOpenAd.AppOpenAdLoadCallback() {
                 override fun onAdLoaded(ad: AppOpenAd) {
                     super.onAdLoaded(ad)
@@ -75,6 +85,9 @@ class AppOpenHelper @Inject constructor(
                 }
                 override fun onAdFailedToLoad(loadAdError: LoadAdError) {
                     super.onAdFailedToLoad(loadAdError)
+                    if (loadAdError.code == com.google.android.gms.ads.AdRequest.ERROR_CODE_NO_FILL) {
+                        adMobRateLimiter.recordNoFill(targetAdUnitId)
+                    }
                     analyticsTracker.logEvent("aj_app_open_load_fail")
                     isLoadingAd = false
                     adLoaded.postValue(false)

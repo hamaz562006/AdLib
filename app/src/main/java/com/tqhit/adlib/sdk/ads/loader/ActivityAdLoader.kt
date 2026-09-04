@@ -162,9 +162,9 @@ class ActivityAdLoader @Inject constructor(
 
         val adConfig = getAdConfig(adKey) ?: AdConfig()
 
-        if (adConfig.useHouseAd) {
+        if (adConfig.useHouseAd || (!adConfig.useHouseAd && !admobHelper.isNetwork(activity))) {
             val houseAd = houseAdManager.getNextAd(getHouseTypeForAdKey(adKey))
-            handleAdLoaded(adKey, houseAd, "HouseAd", adLiveData)
+            handleAdLoaded(adKey, houseAd, if (adConfig.useHouseAd) "HouseAd" else "HouseAdOfflineFallback", adLiveData)
             return
         }
 

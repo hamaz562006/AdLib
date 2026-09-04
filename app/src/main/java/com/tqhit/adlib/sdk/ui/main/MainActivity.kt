@@ -387,6 +387,18 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
         binding.btnRequestConsent.setOnClickListener {
             requestConsent()
         }
+
+        // Ad Inspector
+        binding.btnAdInspector.setOnClickListener {
+            logMessage("Opening Ad Inspector...", "INSPECTOR")
+            admobHelper.launchAdInspector(this) { error ->
+                if (error != null) {
+                    logMessage("Ad Inspector closed with error: ${error.message} (code: ${error.code})", "ERROR")
+                } else {
+                    logMessage("Ad Inspector closed successfully", "SUCCESS")
+                }
+            }
+        }
     }
 
     private fun setupHouseAdsSection() {

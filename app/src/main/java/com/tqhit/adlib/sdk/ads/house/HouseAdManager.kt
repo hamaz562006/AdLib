@@ -22,7 +22,10 @@ class HouseAdManager @Inject constructor(
 ) {
     companion object {
         private const val TAG = "HouseAdManager"
+        private const val CLICK_DEBOUNCE_MS = 1000L
     }
+
+    private var lastClickTime: Long = 0L
 
     private val defaultAds = listOf(
         HouseAdItem(
@@ -114,6 +117,13 @@ class HouseAdManager @Inject constructor(
     }
 
     fun recordClick(context: Context, adItem: HouseAdItem) {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastClickTime < CLICK_DEBOUNCE_MS) {
+            Log.d(TAG, "House Ad click debounced: ${adItem.id}")
+            return
+        }
+        lastClickTime = currentTime
+
         Log.d(TAG, "House Ad clicked: ${adItem.id} -> ${adItem.targetUrl}")
         analyticsTracker.trackHouseAdClick(
             adItem.id,

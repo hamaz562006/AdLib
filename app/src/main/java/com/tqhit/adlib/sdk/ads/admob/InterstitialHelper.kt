@@ -27,7 +27,8 @@ class InterstitialHelper @Inject constructor(
     private val analyticsTracker: AnalyticsTracker,
     private val remoteConfigHelper: FirebaseRemoteConfigHelper,
     private val preferencesHelper: PreferencesHelper,
-    private val adFrequencyManager: AdFrequencyManager
+    private val adFrequencyManager: AdFrequencyManager,
+    private val adMobRateLimiter: AdmobRateLimiter
 ) {
     private val TAG = InterstitialHelper::class.java.simpleName
     private fun isAdEnabled() =
@@ -159,6 +160,20 @@ class InterstitialHelper @Inject constructor(
         analyticsTracker.logEvent("aj_inters_load")
 
         val adUnitId = if (Constant.DEBUG_MODE) Constant.ADMOB_INTERSTITIAL_AD_UNIT_ID else interstitialAdUnitId
+        if (!adMobRateLimiter.canRequest(adUnitId)) {
+            Log.w(TAG, "Interstitial adUnitId $adUnitId is in NO_FILL cooldown")
+            val noFillError = LoadAdError(
+                com.google.android.gms.ads.AdRequest.ERROR_CODE_NO_FILL,
+                "در کولداون NO_FILL",
+                "com.google.android.gms.ads",
+                null,
+                null
+            )
+            adCallback?.onAdFailedToLoad(noFillError)
+            analyticsTracker.logEvent("aj_inters_load_fail_cooldown")
+            return
+        }
+
         InterstitialAd.load(context, adUnitId, getAdRequest(timeoutMilliSecond ?: 60000), object : InterstitialAdLoadCallback() {
             override fun onAdLoaded(interstitialAd: InterstitialAd) {
                 adCallback?.onAdLoaded(interstitialAd)
@@ -166,6 +181,9 @@ class InterstitialHelper @Inject constructor(
             }
 
             override fun onAdFailedToLoad(adError: LoadAdError) {
+                if (adError.code == com.google.android.gms.ads.AdRequest.ERROR_CODE_NO_FILL) {
+                    adMobRateLimiter.recordNoFill(adUnitId)
+                }
                 adCallback?.onAdFailedToLoad(adError)
                 analyticsTracker.logEvent("aj_inters_load_fail")
             }

@@ -3,6 +3,7 @@ package com.tqhit.adlib.sdk.di
 import android.content.Context
 import com.tqhit.adlib.sdk.ads.AdFrequencyManager
 import com.tqhit.adlib.sdk.ads.admob.AdaptiveBannerHelper
+import com.tqhit.adlib.sdk.ads.admob.AdmobRateLimiter
 import com.tqhit.adlib.sdk.ads.cache.AdCacheManager
 import com.tqhit.adlib.sdk.ads.admob.AdmobConsentHelper
 import com.tqhit.adlib.sdk.ads.admob.AdmobHelper
@@ -29,6 +30,12 @@ object AdmobModule {
     @Singleton
     fun provideAdCacheManager(): AdCacheManager {
         return AdCacheManager()
+    }
+
+    @Provides
+    @Singleton
+    fun provideAdmobRateLimiter(remoteConfigHelper: FirebaseRemoteConfigHelper): AdmobRateLimiter {
+        return AdmobRateLimiter(remoteConfigHelper)
     }
 
     @Provides
@@ -77,9 +84,10 @@ object AdmobModule {
         analyticsTracker: AnalyticsTracker,
         remoteConfigHelper: FirebaseRemoteConfigHelper,
         preferencesHelper: PreferencesHelper,
-        adFrequencyManager: AdFrequencyManager
+        adFrequencyManager: AdFrequencyManager,
+        adMobRateLimiter: AdmobRateLimiter
     ): InterstitialHelper {
-        return InterstitialHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper, adFrequencyManager)
+        return InterstitialHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper, adFrequencyManager, adMobRateLimiter)
     }
 
     @Provides
@@ -100,9 +108,10 @@ object AdmobModule {
         analyticsTracker: AnalyticsTracker,
         remoteConfigHelper: FirebaseRemoteConfigHelper,
         preferencesHelper: PreferencesHelper,
-        adFrequencyManager: AdFrequencyManager
+        adFrequencyManager: AdFrequencyManager,
+        adMobRateLimiter: AdmobRateLimiter
     ): RewardHelper {
-        return RewardHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper, adFrequencyManager)
+        return RewardHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper, adFrequencyManager, adMobRateLimiter)
     }
 
     @Provides
@@ -112,8 +121,9 @@ object AdmobModule {
         analyticsTracker: AnalyticsTracker,
         remoteConfigHelper: FirebaseRemoteConfigHelper,
         preferencesHelper: PreferencesHelper,
-        adFrequencyManager: AdFrequencyManager
+        adFrequencyManager: AdFrequencyManager,
+        adMobRateLimiter: AdmobRateLimiter
     ): AppOpenHelper {
-        return AppOpenHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper, adFrequencyManager)
+        return AppOpenHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper, adFrequencyManager, adMobRateLimiter)
     }
 }

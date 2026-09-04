@@ -2,6 +2,7 @@ package com.tqhit.adlib.sdk.ads.admob
 
 import android.app.Activity
 import android.content.Context
+import android.util.Log
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdValue
@@ -26,7 +27,8 @@ class RewardHelper @Inject constructor(
     private val analyticsTracker: AnalyticsTracker,
     private val remoteConfigHelper: FirebaseRemoteConfigHelper,
     private val preferencesHelper: PreferencesHelper,
-    private val adFrequencyManager: AdFrequencyManager
+    private val adFrequencyManager: AdFrequencyManager,
+    private val adMobRateLimiter: AdmobRateLimiter
 ) {
     private val TAG = RewardHelper::class.java.simpleName
     private fun isAdEnabled() =
@@ -142,8 +144,25 @@ class RewardHelper @Inject constructor(
         analyticsTracker.logEvent("aj_reward_load")
 
         val adUnitId = if (Constant.DEBUG_MODE) Constant.ADMOB_REWARDED_AD_UNIT_ID else rewardAdUnitId
+        if (!adMobRateLimiter.canRequest(adUnitId)) {
+            Log.w(TAG, "Rewarded adUnitId $adUnitId is in NO_FILL cooldown")
+            val noFillError = LoadAdError(
+                com.google.android.gms.ads.AdRequest.ERROR_CODE_NO_FILL,
+                "در کولداون NO_FILL",
+                "com.google.android.gms.ads",
+                null,
+                null
+            )
+            adCallback?.onAdFailedToLoad(noFillError)
+            analyticsTracker.logEvent("aj_reward_load_fail_cooldown")
+            return
+        }
+
         RewardedAd.load(context, adUnitId, getAdRequest(timeOutMilliSecond ?: 60000), object: RewardedAdLoadCallback() {
             override fun onAdFailedToLoad(adError: LoadAdError) {
+                if (adError.code == com.google.android.gms.ads.AdRequest.ERROR_CODE_NO_FILL) {
+                    adMobRateLimiter.recordNoFill(adUnitId)
+                }
                 analyticsTracker.logEvent("aj_reward_load_fail")
                 adCallback?.onAdFailedToLoad(adError)
             }

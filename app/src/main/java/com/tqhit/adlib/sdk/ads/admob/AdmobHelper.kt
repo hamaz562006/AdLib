@@ -268,4 +268,10 @@ class AdmobHelper @Inject constructor(
             }
         })
     }
+
+    fun launchAdInspector(context: Context, onComplete: ((error: com.google.android.gms.ads.AdInspectorError?) -> Unit)? = null) {
+        MobileAds.openAdInspector(context) { error ->
+            onComplete?.invoke(error)
+        }
+    }
 }

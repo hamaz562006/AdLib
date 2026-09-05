@@ -40,4 +40,12 @@
         <key>RC_AOA_AD_UNIT_ID</key>
         <value>ca-app-pub-3940256099942544/9257395921</value>
     </entry>
+    <entry>
+        <key>house_ads_enabled</key>
+        <value>true</value>
+    </entry>
+    <entry>
+        <key>house_ads_auto_fallback</key>
+        <value>true</value>
+    </entry>
 </defaultsMap>

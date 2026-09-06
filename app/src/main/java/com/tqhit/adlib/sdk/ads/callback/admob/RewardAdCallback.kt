@@ -22,6 +22,8 @@ open class RewardAdCallback {
 
     open fun onHouseRewardEarned(amount: Int, type: String) {}
 
+    open fun onHouseAdShown() {}
+
     open fun onAdOpened() {}
 
     fun onAdSwipeGestureClicked() {}

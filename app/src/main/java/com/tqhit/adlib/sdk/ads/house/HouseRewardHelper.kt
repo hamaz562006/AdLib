@@ -29,7 +29,8 @@ class HouseRewardHelper @Inject constructor(
 ) {
     fun showHouseReward(
         activity: Activity,
-        callback: HouseRewardAdCallback? = null
+        callback: HouseRewardAdCallback? = null,
+        ignoreFrequencyCheck: Boolean = false
     ) {
         if (preferencesHelper.getBoolean(Constant.IS_PREMIUM, false)) {
             // Even if premium, users might want to claim rewards in some apps, or skip ad and grant reward

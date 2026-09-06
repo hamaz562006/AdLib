@@ -2,6 +2,7 @@ package com.tqhit.adlib.sdk.ads.admob
 
 import android.content.Context
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.RatingBar
 import android.widget.TextView
@@ -18,10 +19,13 @@ import com.google.android.gms.ads.nativead.NativeAdOptions
 import com.google.android.gms.ads.nativead.NativeAdView
 import com.tqhit.adlib.R
 import com.tqhit.adlib.sdk.ads.callback.admob.NativeAdCallback
+import com.tqhit.adlib.sdk.ads.callback.house.HouseNativeAdCallback
+import com.tqhit.adlib.sdk.ads.house.HouseNativeHelper
 import com.tqhit.adlib.sdk.analytics.AnalyticsTracker
 import com.tqhit.adlib.sdk.data.local.PreferencesHelper
 import com.tqhit.adlib.sdk.firebase.FirebaseRemoteConfigHelper
 import com.tqhit.adlib.sdk.utils.Constant
+import com.tqhit.adlib.sdk.utils.NetworkUtils
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -30,7 +34,8 @@ class NativeHelper @Inject constructor(
     private val admobConsentHelper: AdmobConsentHelper,
     private val analyticsTracker: AnalyticsTracker,
     private val remoteConfigHelper: FirebaseRemoteConfigHelper,
-    private val preferencesHelper: PreferencesHelper
+    private val preferencesHelper: PreferencesHelper,
+    private val houseNativeHelper: HouseNativeHelper
 ) {
     private fun isAdEnabled() =
         remoteConfigHelper.getBoolean("nt_enable")
@@ -39,6 +44,56 @@ class NativeHelper @Inject constructor(
 
     private fun getAdRequest(timeout: Int = 60000): AdRequest {
         return AdRequest.Builder().setHttpTimeoutMillis(timeout).build()
+    }
+
+    fun loadNativeWithFallback(
+        context: Context,
+        nativeAdUnitId: String,
+        timeOutMilliSecond: Int?,
+        container: ViewGroup,
+        useFullLayout: Boolean,
+        adCallback: NativeAdCallback?
+    ) {
+        if (!NetworkUtils.isNetworkAvailable(context) && remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)) {
+            adCallback?.onHouseAdShown()
+            showHouseFallback(context, container, useFullLayout, adCallback)
+            return
+        }
+        loadNative(context, nativeAdUnitId, timeOutMilliSecond, object : NativeAdCallback() {
+            override fun onAdLoaded(nativeAd: NativeAd) {
+                adCallback?.onAdLoaded(nativeAd)
+            }
+            override fun onAdFailedToLoad(adError: LoadAdError?) {
+                if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_AUTO_FALLBACK)) {
+                    adCallback?.onHouseAdShown()
+                    showHouseFallback(context, container, useFullLayout, adCallback)
+                } else {
+                    adCallback?.onAdFailedToLoad(adError)
+                }
+            }
+            override fun onAdClicked() { adCallback?.onAdClicked() }
+            override fun onAdImpression() { adCallback?.onAdImpression() }
+            override fun onAdClosed() { adCallback?.onAdClosed() }
+        })
+    }
+
+    private fun showHouseFallback(
+        context: Context,
+        container: ViewGroup,
+        useFullLayout: Boolean,
+        adCallback: NativeAdCallback?
+    ) {
+        val bridge = object : HouseNativeAdCallback() {
+            override fun onAdImpression() { adCallback?.onAdImpression() }
+            override fun onAdClicked() { adCallback?.onAdClicked() }
+            override fun onAdClosed() { adCallback?.onAdClosed() }
+            override fun onAdFailedToLoad(errorMessage: String) { adCallback?.onAdFailedToLoad(null) }
+        }
+        if (useFullLayout) {
+            houseNativeHelper.showHouseNativeFull(context, container, bridge)
+        } else {
+            houseNativeHelper.showHouseNativeSmall(context, container, bridge)
+        }
     }
 
     fun loadNative(

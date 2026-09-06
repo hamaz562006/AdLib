@@ -13,10 +13,13 @@ import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.OnPaidEventListener
 import com.tqhit.adlib.sdk.ads.callback.admob.BannerAdCallback
+import com.tqhit.adlib.sdk.ads.callback.house.HouseBannerAdCallback
+import com.tqhit.adlib.sdk.ads.house.HouseBannerHelper
 import com.tqhit.adlib.sdk.analytics.AnalyticsTracker
 import com.tqhit.adlib.sdk.data.local.PreferencesHelper
 import com.tqhit.adlib.sdk.firebase.FirebaseRemoteConfigHelper
 import com.tqhit.adlib.sdk.utils.Constant
+import com.tqhit.adlib.sdk.utils.NetworkUtils
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,7 +29,8 @@ class BannerHelper @Inject constructor(
     private val admobConsentHelper: AdmobConsentHelper,
     private val analyticsTracker: AnalyticsTracker,
     private val remoteConfigHelper: FirebaseRemoteConfigHelper,
-    private val preferencesHelper: PreferencesHelper
+    private val preferencesHelper: PreferencesHelper,
+    private val houseBannerHelper: HouseBannerHelper
 ) {
     private fun isAdEnabled() =
         remoteConfigHelper.getBoolean("bn_enable")
@@ -93,6 +97,47 @@ class BannerHelper @Inject constructor(
     ) {
         parent.removeAllViews()
         parent.addView(adView)
+    }
+
+    fun showBannerWithFallback(
+        activity: Activity,
+        bannerAdUnitId: String,
+        parent: ViewGroup,
+        timeoutMilliSecond: Int?,
+        adCallback: BannerAdCallback?
+    ) {
+        if (!NetworkUtils.isNetworkAvailable(activity) && remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)) {
+            adCallback?.onHouseAdShown()
+            houseBannerHelper.loadHouseBanner(activity, parent, createBridgedBannerCallback(adCallback))
+            return
+        }
+        val adView = loadBanner(activity, bannerAdUnitId, timeoutMilliSecond, object : BannerAdCallback() {
+            override fun onAdLoaded(adView: AdView) {
+                parent.removeAllViews()
+                parent.addView(adView)
+                adCallback?.onAdLoaded(adView)
+            }
+            override fun onAdFailedToLoad(adError: LoadAdError?) {
+                if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_AUTO_FALLBACK)) {
+                    adCallback?.onHouseAdShown()
+                    houseBannerHelper.loadHouseBanner(activity, parent, createBridgedBannerCallback(adCallback))
+                } else {
+                    adCallback?.onAdFailedToLoad(adError)
+                }
+            }
+            override fun onAdClicked() { adCallback?.onAdClicked() }
+            override fun onAdImpression() { adCallback?.onAdImpression() }
+            override fun onAdClosed() { adCallback?.onAdClosed() }
+        })
+    }
+
+    private fun createBridgedBannerCallback(adCallback: BannerAdCallback?): HouseBannerAdCallback {
+        return object : HouseBannerAdCallback() {
+            override fun onAdImpression() { adCallback?.onAdImpression() }
+            override fun onAdClicked() { adCallback?.onAdClicked() }
+            override fun onAdClosed() { adCallback?.onAdClosed() }
+            override fun onAdFailedToLoad(errorMessage: String) { adCallback?.onAdFailedToLoad(null) }
+        }
     }
 
     fun loadBanner(

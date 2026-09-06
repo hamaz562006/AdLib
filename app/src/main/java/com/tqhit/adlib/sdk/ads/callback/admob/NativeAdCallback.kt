@@ -16,5 +16,7 @@ open class NativeAdCallback {
 
     open fun onAdOpened() {}
 
+    open fun onHouseAdShown() {}
+
     fun onAdSwipeGestureClicked() {}
 }

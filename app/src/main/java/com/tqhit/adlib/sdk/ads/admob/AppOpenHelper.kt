@@ -51,6 +51,7 @@ class AppOpenHelper @Inject constructor(
 
     interface OnShowAdCompleteListener {
         fun onShowAdComplete()
+        fun onHouseAdShown() {}
     }
 
     fun setAdUnitId(adUnitId: String) {
@@ -130,26 +131,30 @@ class AppOpenHelper @Inject constructor(
 
         // If device is offline and House Ads enabled, show House App Open immediately
         if (!NetworkUtils.isNetworkAvailable(activity) && isHouseAdsEnabled()) {
+            adCallback.onHouseAdShown()
             houseAppOpenHelper.showHouseAppOpen(
                 activity,
                 object : HouseAppOpenHelper.OnShowAdCompleteListener {
                     override fun onShowAdComplete() {
                         adCallback.onShowAdComplete()
                     }
-                }
+                },
+                ignoreFrequencyCheck = true
             )
             return
         }
 
         if (!isAdAvailable()) {
             if (isHouseAutoFallback()) {
+                adCallback.onHouseAdShown()
                 houseAppOpenHelper.showHouseAppOpen(
                     activity,
                     object : HouseAppOpenHelper.OnShowAdCompleteListener {
                         override fun onShowAdComplete() {
                             adCallback.onShowAdComplete()
                         }
-                    }
+                    },
+                    ignoreFrequencyCheck = true
                 )
             } else {
                 adCallback.onShowAdComplete()
@@ -161,6 +166,7 @@ class AppOpenHelper @Inject constructor(
         // Frequency gating via AdFrequencyManager: fallback to House App Open if blocked
         if (!adFrequencyManager.canShowAppOpen()) {
             if (isHouseAdsEnabled()) {
+                adCallback.onHouseAdShown()
                 houseAppOpenHelper.showHouseAppOpen(
                     activity,
                     object : HouseAppOpenHelper.OnShowAdCompleteListener {
@@ -197,13 +203,15 @@ class AppOpenHelper @Inject constructor(
                 adLoaded.postValue(false)
                 adFrequencyManager.recordAppOpenShown()
                 if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
+                    adCallback.onHouseAdShown()
                     houseAppOpenHelper.showHouseAppOpen(
                         activity,
                         object : HouseAppOpenHelper.OnShowAdCompleteListener {
                             override fun onShowAdComplete() {
                                 adCallback.onShowAdComplete()
                             }
-                        }
+                        },
+                        ignoreFrequencyCheck = true
                     )
                 } else {
                     adCallback.onShowAdComplete()

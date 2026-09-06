@@ -13,7 +13,9 @@ import com.tqhit.adlib.sdk.ads.admob.InterstitialHelper
 import com.tqhit.adlib.sdk.ads.admob.NativeHelper
 import com.tqhit.adlib.sdk.ads.admob.RewardHelper
 import com.tqhit.adlib.sdk.ads.house.HouseAppOpenHelper
+import com.tqhit.adlib.sdk.ads.house.HouseBannerHelper
 import com.tqhit.adlib.sdk.ads.house.HouseInterstitialHelper
+import com.tqhit.adlib.sdk.ads.house.HouseNativeHelper
 import com.tqhit.adlib.sdk.ads.house.HouseRewardHelper
 import com.tqhit.adlib.sdk.analytics.AnalyticsTracker
 import com.tqhit.adlib.sdk.data.local.PreferencesHelper
@@ -75,9 +77,10 @@ object AdmobModule {
         admobConsentHelper: AdmobConsentHelper,
         analyticsTracker: AnalyticsTracker,
         remoteConfigHelper: FirebaseRemoteConfigHelper,
-        preferencesHelper: PreferencesHelper
+        preferencesHelper: PreferencesHelper,
+        houseBannerHelper: HouseBannerHelper
     ): BannerHelper {
-        return BannerHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper)
+        return BannerHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper, houseBannerHelper)
     }
 
     @Provides
@@ -100,9 +103,10 @@ object AdmobModule {
         admobConsentHelper: AdmobConsentHelper,
         analyticsTracker: AnalyticsTracker,
         remoteConfigHelper: FirebaseRemoteConfigHelper,
-        preferencesHelper: PreferencesHelper
+        preferencesHelper: PreferencesHelper,
+        houseNativeHelper: HouseNativeHelper
     ): NativeHelper {
-        return NativeHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper)
+        return NativeHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper, houseNativeHelper)
     }
 
     @Provides

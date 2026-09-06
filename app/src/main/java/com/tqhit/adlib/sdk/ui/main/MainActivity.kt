@@ -159,15 +159,19 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
         binding.btnLoadBanner.setOnClickListener {
             logMessage("Loading AdMob Standard Banner...", "BANNER")
             binding.flBannerContainer.removeAllViews()
-            currentBannerAdView = bannerHelper.loadBanner(
+            bannerHelper.showBannerWithFallback(
                 this,
                 Constant.ADMOB_BANNER_AD_UNIT_ID,
+                binding.flBannerContainer,
                 60000,
                 object : BannerAdCallback() {
+                    override fun onHouseAdShown() {
+                        logMessage("Falling back to HOUSE Ad (AdMob unavailable)", "HOUSE_FALLBACK")
+                    }
+
                     override fun onAdLoaded(adView: AdView) {
+                        currentBannerAdView = adView
                         logMessage("AdMob Standard Banner loaded", "SUCCESS")
-                        binding.flBannerContainer.removeAllViews()
-                        binding.flBannerContainer.addView(adView)
                     }
 
                     override fun onAdFailedToLoad(adError: LoadAdError?) {
@@ -176,6 +180,10 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
 
                     override fun onAdClicked() {
                         logMessage("AdMob Banner clicked", "CLICK")
+                    }
+
+                    override fun onAdClosed() {
+                        logMessage("Banner closed", "INFO")
                     }
                 }
             )
@@ -223,8 +231,12 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
                     this,
                     preloadedInterstitialAd!!,
                     object : InterstitialAdCallback() {
+                        override fun onHouseAdShown() {
+                            logMessage("Falling back to HOUSE Ad (AdMob unavailable)", "HOUSE_FALLBACK")
+                        }
+
                         override fun onAdClosed() {
-                            logMessage("Preloaded Interstitial Ad closed", "INFO")
+                            logMessage("Interstitial Ad closed", "INFO")
                             preloadedInterstitialAd = null
                             refreshFrequencyStatus()
                         }
@@ -241,8 +253,12 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
                     null,
                     60000,
                     object : InterstitialAdCallback() {
+                        override fun onHouseAdShown() {
+                            logMessage("Falling back to HOUSE Ad (AdMob unavailable)", "HOUSE_FALLBACK")
+                        }
+
                         override fun onAdClosed() {
-                            logMessage("Direct Interstitial Ad closed", "INFO")
+                            logMessage("Interstitial Ad closed", "INFO")
                             refreshFrequencyStatus()
                         }
 
@@ -282,11 +298,17 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
         binding.btnLoadNativeSmall.setOnClickListener {
             logMessage("Loading AdMob Native Small Ad...", "NATIVE")
             binding.flNativeContainer.removeAllViews()
-            nativeHelper.loadNative(
+            nativeHelper.loadNativeWithFallback(
                 this,
                 Constant.ADMOB_NATIVE_AD_UNIT_ID,
                 60000,
+                binding.flNativeContainer,
+                useFullLayout = false,
                 object : NativeAdCallback() {
+                    override fun onHouseAdShown() {
+                        logMessage("Falling back to HOUSE Ad (AdMob unavailable)", "HOUSE_FALLBACK")
+                    }
+
                     override fun onAdLoaded(nativeAd: NativeAd) {
                         currentNativeAd = nativeAd
                         logMessage("AdMob Native Small loaded. Populating views...", "SUCCESS")
@@ -300,6 +322,14 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
                     override fun onAdFailedToLoad(adError: LoadAdError?) {
                         logMessage("Native Small failed: ${adError?.message}", "ERROR")
                     }
+
+                    override fun onAdClicked() {
+                        logMessage("Native Small clicked", "CLICK")
+                    }
+
+                    override fun onAdClosed() {
+                        logMessage("Native Small closed", "INFO")
+                    }
                 }
             )
         }
@@ -308,11 +338,17 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
         binding.btnLoadNativeFull.setOnClickListener {
             logMessage("Loading AdMob Native Full Ad...", "NATIVE")
             binding.flNativeContainer.removeAllViews()
-            nativeHelper.loadNative(
+            nativeHelper.loadNativeWithFallback(
                 this,
                 Constant.ADMOB_NATIVE_AD_UNIT_ID,
                 60000,
+                binding.flNativeContainer,
+                useFullLayout = true,
                 object : NativeAdCallback() {
+                    override fun onHouseAdShown() {
+                        logMessage("Falling back to HOUSE Ad (AdMob unavailable)", "HOUSE_FALLBACK")
+                    }
+
                     override fun onAdLoaded(nativeAd: NativeAd) {
                         currentNativeAd = nativeAd
                         logMessage("AdMob Native Full loaded. Populating views...", "SUCCESS")
@@ -325,6 +361,14 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
 
                     override fun onAdFailedToLoad(adError: LoadAdError?) {
                         logMessage("Native Full failed: ${adError?.message}", "ERROR")
+                    }
+
+                    override fun onAdClicked() {
+                        logMessage("Native Full clicked", "CLICK")
+                    }
+
+                    override fun onAdClosed() {
+                        logMessage("Native Full closed", "INFO")
                     }
                 }
             )
@@ -347,6 +391,10 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
                 null,
                 60000,
                 object : RewardAdCallback() {
+                    override fun onHouseAdShown() {
+                        logMessage("Falling back to HOUSE Ad (AdMob unavailable)", "HOUSE_FALLBACK")
+                    }
+
                     override fun onUserEarnedReward(rewardItem: RewardItem?) {
                         val amount = rewardItem?.amount ?: 10
                         val type = rewardItem?.type ?: "coins"
@@ -375,6 +423,10 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
             appOpenHelper.showAdIfAvailable(
                 this,
                 object : AppOpenHelper.OnShowAdCompleteListener {
+                    override fun onHouseAdShown() {
+                        logMessage("Falling back to HOUSE Ad (AdMob unavailable)", "HOUSE_FALLBACK")
+                    }
+
                     override fun onShowAdComplete() {
                         logMessage("App Open Ad display completed", "INFO")
                         refreshFrequencyStatus()

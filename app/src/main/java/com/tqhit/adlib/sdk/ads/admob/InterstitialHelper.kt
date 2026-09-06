@@ -78,13 +78,15 @@ class InterstitialHelper @Inject constructor(
     ) {
         // If device is offline and House Ads are enabled, show House Interstitial immediately
         if (!NetworkUtils.isNetworkAvailable(activity) && isHouseAdsEnabled()) {
-            houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback))
+            adCallback?.onHouseAdShown()
+            houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
             return
         }
 
         if (!isAdEnabled() || !admobConsentHelper.canRequestAds()) {
             if (isHouseAdsEnabled()) {
-                houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback))
+                adCallback?.onHouseAdShown()
+                houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
             } else {
                 adCallback?.onAdClosed()
             }
@@ -94,6 +96,7 @@ class InterstitialHelper @Inject constructor(
         // Check frequency and delay rules: fallback to House ad if blocked
         if (!adFrequencyManager.canShowInterstitial()) {
             if (isHouseAdsEnabled()) {
+                adCallback?.onHouseAdShown()
                 houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
             } else {
                 adCallback?.onAdClosed()
@@ -118,6 +121,7 @@ class InterstitialHelper @Inject constructor(
                         loadingAdsDialog.dismiss()
                     }
                     if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
+                        adCallback?.onHouseAdShown()
                         houseInterstitialHelper.showHouseInterstitial(
                             activity,
                             object : HouseInterstitialAdCallback() {
@@ -128,7 +132,8 @@ class InterstitialHelper @Inject constructor(
                                     adCallback?.onAdFailedToLoad(adError)
                                     adCallback?.onAdClosed()
                                 }
-                            }
+                            },
+                            ignoreFrequencyCheck = true
                         )
                     } else {
                         adCallback?.onAdFailedToLoad(adError)
@@ -149,7 +154,8 @@ class InterstitialHelper @Inject constructor(
     ) {
         if (!isAdEnabled() || !admobConsentHelper.canRequestAds()) {
             if (isHouseAdsEnabled()) {
-                houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback))
+                adCallback?.onHouseAdShown()
+                houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
             } else {
                 adCallback?.onAdClosed()
             }
@@ -159,6 +165,7 @@ class InterstitialHelper @Inject constructor(
         // Check frequency and delay rules: fallback to House ad if blocked
         if (!adFrequencyManager.canShowInterstitial()) {
             if (isHouseAdsEnabled()) {
+                adCallback?.onHouseAdShown()
                 houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
             } else {
                 adCallback?.onAdClosed()
@@ -188,7 +195,8 @@ class InterstitialHelper @Inject constructor(
                 override fun onAdFailedToShowFullScreenContent(p0: AdError) {
                     super.onAdFailedToShowFullScreenContent(p0)
                     if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
-                        houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback))
+                        adCallback?.onHouseAdShown()
+                        houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
                     } else {
                         adCallback?.onAdClosed()
                     }

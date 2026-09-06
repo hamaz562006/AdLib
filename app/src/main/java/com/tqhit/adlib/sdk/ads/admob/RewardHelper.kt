@@ -85,13 +85,15 @@ class RewardHelper @Inject constructor(
     ) {
         // If device is offline and House Ads are enabled, show House Reward immediately
         if (!NetworkUtils.isNetworkAvailable(activity) && isHouseAdsEnabled()) {
-            houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback))
+            adCallback?.onHouseAdShown()
+            houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
             return
         }
 
         if (!isAdEnabled() || !admobConsentHelper.canRequestAds()) {
             if (isHouseAdsEnabled()) {
-                houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback))
+                adCallback?.onHouseAdShown()
+                houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
             } else {
                 adCallback?.onAdFailedToLoad()
             }
@@ -115,6 +117,7 @@ class RewardHelper @Inject constructor(
                         loadingAdsDialog.dismiss()
                     }
                     if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
+                        adCallback?.onHouseAdShown()
                         houseRewardHelper.showHouseReward(
                             activity,
                             object : HouseRewardAdCallback() {
@@ -128,7 +131,8 @@ class RewardHelper @Inject constructor(
                                 override fun onAdFailedToLoad(errorMessage: String) {
                                     adCallback?.onAdFailedToLoad(adError)
                                 }
-                            }
+                            },
+                            ignoreFrequencyCheck = true
                         )
                     } else {
                         adCallback?.onAdFailedToLoad(adError)
@@ -148,7 +152,8 @@ class RewardHelper @Inject constructor(
     ) {
         if (!isAdEnabled() || !admobConsentHelper.canRequestAds()) {
             if (isHouseAdsEnabled()) {
-                houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback))
+                adCallback?.onHouseAdShown()
+                houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
             } else {
                 adCallback?.onAdFailedToLoad()
             }
@@ -177,7 +182,8 @@ class RewardHelper @Inject constructor(
                 override fun onAdFailedToShowFullScreenContent(var0: AdError) {
                     super.onAdFailedToShowFullScreenContent(var0)
                     if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
-                        houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback))
+                        adCallback?.onHouseAdShown()
+                        houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
                     } else {
                         adCallback?.onAdFailedToShowFullScreenContent(var0)
                     }

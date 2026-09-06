@@ -47,9 +47,10 @@ object AdmobModule {
     @Singleton
     fun provideAdaptiveBannerHelper(
         preferencesHelper: PreferencesHelper,
-        remoteConfigHelper: FirebaseRemoteConfigHelper
+        remoteConfigHelper: FirebaseRemoteConfigHelper,
+        houseBannerHelper: HouseBannerHelper
     ): AdaptiveBannerHelper {
-        return AdaptiveBannerHelper(preferencesHelper, remoteConfigHelper)
+        return AdaptiveBannerHelper(preferencesHelper, remoteConfigHelper, houseBannerHelper)
     }
 
     @Provides

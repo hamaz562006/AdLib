@@ -140,6 +140,38 @@ class BannerHelper @Inject constructor(
         }
     }
 
+    fun showCollapsibleBannerWithFallback(
+        activity: Activity,
+        bannerAdUnitId: String,
+        parent: ViewGroup,
+        timeoutMilliSecond: Int?,
+        adCallback: BannerAdCallback?
+    ) {
+        if (!NetworkUtils.isNetworkAvailable(activity) && remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)) {
+            adCallback?.onHouseAdShown()
+            houseBannerHelper.loadHouseBanner(activity, parent, createBridgedBannerCallback(adCallback))
+            return
+        }
+        val adView = loadCollapsibleBanner(activity, bannerAdUnitId, timeoutMilliSecond, object : BannerAdCallback() {
+            override fun onAdLoaded(adView: AdView) {
+                parent.removeAllViews()
+                parent.addView(adView)
+                adCallback?.onAdLoaded(adView)
+            }
+            override fun onAdFailedToLoad(adError: LoadAdError?) {
+                if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_AUTO_FALLBACK)) {
+                    adCallback?.onHouseAdShown()
+                    houseBannerHelper.loadHouseBanner(activity, parent, createBridgedBannerCallback(adCallback))
+                } else {
+                    adCallback?.onAdFailedToLoad(adError)
+                }
+            }
+            override fun onAdClicked() { adCallback?.onAdClicked() }
+            override fun onAdImpression() { adCallback?.onAdImpression() }
+            override fun onAdClosed() { adCallback?.onAdClosed() }
+        })
+    }
+
     fun loadBanner(
         activity: Activity,
         bannerAdUnitId: String,

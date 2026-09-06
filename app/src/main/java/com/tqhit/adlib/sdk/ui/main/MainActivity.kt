@@ -193,26 +193,34 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
         binding.btnLoadCollapsibleBanner.setOnClickListener {
             logMessage("Loading AdMob Collapsible Banner...", "BANNER")
             binding.flBannerContainer.removeAllViews()
-            val adView = bannerHelper.loadCollapsibleBanner(
+            bannerHelper.showCollapsibleBannerWithFallback(
                 this,
                 Constant.ADMOB_COLLAPSIBLE_BANNER_AD_UNIT_ID,
+                binding.flBannerContainer,
                 60000,
                 object : BannerAdCallback() {
+                    override fun onHouseAdShown() {
+                        logMessage("Falling back to HOUSE Ad (AdMob unavailable)", "HOUSE_FALLBACK")
+                    }
+
                     override fun onAdLoaded(adView: AdView) {
+                        currentBannerAdView = adView
                         logMessage("AdMob Collapsible Banner loaded", "SUCCESS")
-                        binding.flBannerContainer.removeAllViews()
-                        binding.flBannerContainer.addView(adView)
                     }
 
                     override fun onAdFailedToLoad(adError: LoadAdError?) {
                         logMessage("Collapsible Banner failed: ${adError?.message ?: "Unknown"}", "ERROR")
                     }
+
+                    override fun onAdClicked() {
+                        logMessage("AdMob Collapsible Banner clicked", "CLICK")
+                    }
+
+                    override fun onAdClosed() {
+                        logMessage("Collapsible Banner closed", "INFO")
+                    }
                 }
             )
-            if (adView != null) {
-                binding.flBannerContainer.removeAllViews()
-                binding.flBannerContainer.addView(adView)
-            }
         }
 
         // Clear Banner

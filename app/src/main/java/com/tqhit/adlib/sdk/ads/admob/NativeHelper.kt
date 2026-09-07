@@ -26,6 +26,9 @@ import com.tqhit.adlib.sdk.data.local.PreferencesHelper
 import com.tqhit.adlib.sdk.firebase.FirebaseRemoteConfigHelper
 import com.tqhit.adlib.sdk.utils.Constant
 import com.tqhit.adlib.sdk.utils.NetworkUtils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -54,18 +57,47 @@ class NativeHelper @Inject constructor(
         useFullLayout: Boolean,
         adCallback: NativeAdCallback?
     ) {
-        if (!NetworkUtils.isNetworkAvailable(context) && remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)) {
-            adCallback?.onHouseAdShown()
-            showHouseFallback(context, container, useFullLayout, adCallback)
+        if (!NetworkUtils.isNetworkAvailable(context)) {
+            if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)) {
+                adCallback?.onHouseAdShown("Network unavailable")
+                showHouseFallback(context, container, useFullLayout, adCallback)
+            } else {
+                adCallback?.onAdFailedToLoad(null)
+            }
             return
         }
+
+        if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)) {
+            CoroutineScope(Dispatchers.Main).launch {
+                val reachable = NetworkUtils.isAdServerReachable()
+                if (!reachable) {
+                    adCallback?.onHouseAdShown("Ad server unreachable (possibly blocked network)")
+                    showHouseFallback(context, container, useFullLayout, adCallback)
+                } else {
+                    executeLoadNativeWithFallback(context, nativeAdUnitId, timeOutMilliSecond, container, useFullLayout, adCallback)
+                }
+            }
+        } else {
+            executeLoadNativeWithFallback(context, nativeAdUnitId, timeOutMilliSecond, container, useFullLayout, adCallback)
+        }
+    }
+
+    private fun executeLoadNativeWithFallback(
+        context: Context,
+        nativeAdUnitId: String,
+        timeOutMilliSecond: Int?,
+        container: ViewGroup,
+        useFullLayout: Boolean,
+        adCallback: NativeAdCallback?
+    ) {
         loadNative(context, nativeAdUnitId, timeOutMilliSecond, object : NativeAdCallback() {
             override fun onAdLoaded(nativeAd: NativeAd) {
                 adCallback?.onAdLoaded(nativeAd)
             }
             override fun onAdFailedToLoad(adError: LoadAdError?) {
                 if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_AUTO_FALLBACK)) {
-                    adCallback?.onHouseAdShown()
+                    val reason = adError?.message ?: adError?.code?.toString() ?: "Unknown AdMob error"
+                    adCallback?.onHouseAdShown(reason)
                     showHouseFallback(context, container, useFullLayout, adCallback)
                 } else {
                     adCallback?.onAdFailedToLoad(adError)

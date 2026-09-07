@@ -20,6 +20,9 @@ import com.tqhit.adlib.sdk.firebase.FirebaseRemoteConfigHelper
 import com.tqhit.adlib.sdk.ui.dialog.LoadingAdsDialog
 import com.tqhit.adlib.sdk.utils.Constant
 import com.tqhit.adlib.sdk.utils.NetworkUtils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.getValue
@@ -77,15 +80,47 @@ class InterstitialHelper @Inject constructor(
         adCallback: InterstitialAdCallback?
     ) {
         // If device is offline and House Ads are enabled, show House Interstitial immediately
-        if (!NetworkUtils.isNetworkAvailable(activity) && isHouseAdsEnabled()) {
-            adCallback?.onHouseAdShown()
-            houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
+        if (!NetworkUtils.isNetworkAvailable(activity)) {
+            if (isHouseAdsEnabled()) {
+                adCallback?.onHouseAdShown("Network unavailable")
+                houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
+            } else {
+                adCallback?.onAdClosed()
+            }
             return
         }
 
+        if (interstitialAd != null) {
+            showInterstitial(activity, interstitialAd, adCallback)
+            return
+        }
+
+        // For loading and showing AdMob interstitial: pre-check reachability if house ads enabled
+        if (isHouseAdsEnabled()) {
+            CoroutineScope(Dispatchers.Main).launch {
+                val reachable = NetworkUtils.isAdServerReachable()
+                if (!reachable && !activity.isFinishing && !activity.isDestroyed) {
+                    adCallback?.onHouseAdShown("Ad server unreachable (possibly blocked network)")
+                    houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
+                } else if (!activity.isFinishing && !activity.isDestroyed) {
+                    executeShowInterstitial(activity, interstitialAdUnitId, null, timeoutMilliSecond, adCallback)
+                }
+            }
+        } else {
+            executeShowInterstitial(activity, interstitialAdUnitId, null, timeoutMilliSecond, adCallback)
+        }
+    }
+
+    private fun executeShowInterstitial(
+        activity: Activity,
+        interstitialAdUnitId: String,
+        interstitialAd: InterstitialAd?,
+        timeoutMilliSecond: Int?,
+        adCallback: InterstitialAdCallback?
+    ) {
         if (!isAdEnabled() || !admobConsentHelper.canRequestAds()) {
             if (isHouseAdsEnabled()) {
-                adCallback?.onHouseAdShown()
+                adCallback?.onHouseAdShown("AdMob disabled or consent missing")
                 houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
             } else {
                 adCallback?.onAdClosed()
@@ -96,7 +131,7 @@ class InterstitialHelper @Inject constructor(
         // Check frequency and delay rules: fallback to House ad if blocked
         if (!adFrequencyManager.canShowInterstitial()) {
             if (isHouseAdsEnabled()) {
-                adCallback?.onHouseAdShown()
+                adCallback?.onHouseAdShown("Frequency capped")
                 houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
             } else {
                 adCallback?.onAdClosed()
@@ -121,7 +156,8 @@ class InterstitialHelper @Inject constructor(
                         loadingAdsDialog.dismiss()
                     }
                     if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
-                        adCallback?.onHouseAdShown()
+                        val reason = adError?.message ?: adError?.code?.toString() ?: "Unknown AdMob error"
+                        adCallback?.onHouseAdShown(reason)
                         houseInterstitialHelper.showHouseInterstitial(
                             activity,
                             object : HouseInterstitialAdCallback() {
@@ -154,7 +190,7 @@ class InterstitialHelper @Inject constructor(
     ) {
         if (!isAdEnabled() || !admobConsentHelper.canRequestAds()) {
             if (isHouseAdsEnabled()) {
-                adCallback?.onHouseAdShown()
+                adCallback?.onHouseAdShown("AdMob disabled or consent missing")
                 houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
             } else {
                 adCallback?.onAdClosed()
@@ -165,7 +201,7 @@ class InterstitialHelper @Inject constructor(
         // Check frequency and delay rules: fallback to House ad if blocked
         if (!adFrequencyManager.canShowInterstitial()) {
             if (isHouseAdsEnabled()) {
-                adCallback?.onHouseAdShown()
+                adCallback?.onHouseAdShown("Frequency capped")
                 houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
             } else {
                 adCallback?.onAdClosed()
@@ -195,7 +231,8 @@ class InterstitialHelper @Inject constructor(
                 override fun onAdFailedToShowFullScreenContent(p0: AdError) {
                     super.onAdFailedToShowFullScreenContent(p0)
                     if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
-                        adCallback?.onHouseAdShown()
+                        val reason = p0.message.ifBlank { p0.code.toString() }
+                        adCallback?.onHouseAdShown(reason)
                         houseInterstitialHelper.showHouseInterstitial(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
                     } else {
                         adCallback?.onAdClosed()

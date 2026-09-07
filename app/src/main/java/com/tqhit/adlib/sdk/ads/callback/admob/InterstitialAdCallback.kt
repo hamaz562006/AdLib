@@ -16,7 +16,7 @@ open class InterstitialAdCallback {
 
     open fun onAdOpened() {}
 
-    open fun onHouseAdShown() {}
+    open fun onHouseAdShown(reason: String) {}
 
     fun onAdSwipeGestureClicked() {}
 }

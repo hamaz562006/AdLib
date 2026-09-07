@@ -21,6 +21,9 @@ import com.tqhit.adlib.sdk.firebase.FirebaseRemoteConfigHelper
 import com.tqhit.adlib.sdk.ui.dialog.LoadingAdsDialog
 import com.tqhit.adlib.sdk.utils.Constant
 import com.tqhit.adlib.sdk.utils.NetworkUtils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -84,15 +87,47 @@ class RewardHelper @Inject constructor(
         adCallback: RewardAdCallback?
     ) {
         // If device is offline and House Ads are enabled, show House Reward immediately
-        if (!NetworkUtils.isNetworkAvailable(activity) && isHouseAdsEnabled()) {
-            adCallback?.onHouseAdShown()
-            houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
+        if (!NetworkUtils.isNetworkAvailable(activity)) {
+            if (isHouseAdsEnabled()) {
+                adCallback?.onHouseAdShown("Network unavailable")
+                houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
+            } else {
+                adCallback?.onAdFailedToLoad()
+            }
             return
         }
 
+        if (rewardedAd != null) {
+            showReward(activity, rewardedAd, adCallback)
+            return
+        }
+
+        // For loading and showing AdMob reward: pre-check reachability if house ads enabled
+        if (isHouseAdsEnabled()) {
+            CoroutineScope(Dispatchers.Main).launch {
+                val reachable = NetworkUtils.isAdServerReachable()
+                if (!reachable && !activity.isFinishing && !activity.isDestroyed) {
+                    adCallback?.onHouseAdShown("Ad server unreachable (possibly blocked network)")
+                    houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
+                } else if (!activity.isFinishing && !activity.isDestroyed) {
+                    executeShowReward(activity, rewardAdUnitId, null, timeOutMilliSecond, adCallback)
+                }
+            }
+        } else {
+            executeShowReward(activity, rewardAdUnitId, null, timeOutMilliSecond, adCallback)
+        }
+    }
+
+    private fun executeShowReward(
+        activity: Activity,
+        rewardAdUnitId: String,
+        rewardedAd: RewardedAd?,
+        timeOutMilliSecond: Int?,
+        adCallback: RewardAdCallback?
+    ) {
         if (!isAdEnabled() || !admobConsentHelper.canRequestAds()) {
             if (isHouseAdsEnabled()) {
-                adCallback?.onHouseAdShown()
+                adCallback?.onHouseAdShown("AdMob disabled or consent missing")
                 houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
             } else {
                 adCallback?.onAdFailedToLoad()
@@ -117,7 +152,8 @@ class RewardHelper @Inject constructor(
                         loadingAdsDialog.dismiss()
                     }
                     if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
-                        adCallback?.onHouseAdShown()
+                        val reason = adError?.message ?: adError?.code?.toString() ?: "Unknown AdMob error"
+                        adCallback?.onHouseAdShown(reason)
                         houseRewardHelper.showHouseReward(
                             activity,
                             object : HouseRewardAdCallback() {
@@ -152,7 +188,7 @@ class RewardHelper @Inject constructor(
     ) {
         if (!isAdEnabled() || !admobConsentHelper.canRequestAds()) {
             if (isHouseAdsEnabled()) {
-                adCallback?.onHouseAdShown()
+                adCallback?.onHouseAdShown("AdMob disabled or consent missing")
                 houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
             } else {
                 adCallback?.onAdFailedToLoad()
@@ -182,7 +218,8 @@ class RewardHelper @Inject constructor(
                 override fun onAdFailedToShowFullScreenContent(var0: AdError) {
                     super.onAdFailedToShowFullScreenContent(var0)
                     if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
-                        adCallback?.onHouseAdShown()
+                        val reason = var0.message.ifBlank { var0.code.toString() }
+                        adCallback?.onHouseAdShown(reason)
                         houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
                     } else {
                         adCallback?.onAdFailedToShowFullScreenContent(var0)

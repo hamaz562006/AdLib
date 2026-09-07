@@ -17,6 +17,10 @@ import com.tqhit.adlib.sdk.data.local.PreferencesHelper
 import com.tqhit.adlib.sdk.firebase.FirebaseRemoteConfigHelper
 import com.tqhit.adlib.sdk.utils.Constant
 import com.tqhit.adlib.sdk.utils.NetworkUtils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -51,7 +55,7 @@ class AppOpenHelper @Inject constructor(
 
     interface OnShowAdCompleteListener {
         fun onShowAdComplete()
-        fun onHouseAdShown() {}
+        fun onHouseAdShown(reason: String) {}
     }
 
     fun setAdUnitId(adUnitId: String) {
@@ -129,24 +133,43 @@ class AppOpenHelper @Inject constructor(
             return
         }
 
-        // If device is offline and House Ads enabled, show House App Open immediately
-        if (!NetworkUtils.isNetworkAvailable(activity) && isHouseAdsEnabled()) {
-            adCallback.onHouseAdShown()
-            houseAppOpenHelper.showHouseAppOpen(
-                activity,
-                object : HouseAppOpenHelper.OnShowAdCompleteListener {
-                    override fun onShowAdComplete() {
-                        adCallback.onShowAdComplete()
+        if (!NetworkUtils.isNetworkAvailable(activity)) {
+            if (isHouseAdsEnabled()) {
+                // App Open race condition fix: retry after 1.2s delay before falling back
+                CoroutineScope(Dispatchers.Main).launch {
+                    delay(1200)
+                    if (activity.isFinishing || activity.isDestroyed) return@launch
+                    if (!NetworkUtils.isNetworkAvailable(activity)) {
+                        adCallback.onHouseAdShown("Network unavailable (after retry)")
+                        houseAppOpenHelper.showHouseAppOpen(
+                            activity,
+                            object : HouseAppOpenHelper.OnShowAdCompleteListener {
+                                override fun onShowAdComplete() {
+                                    adCallback.onShowAdComplete()
+                                }
+                            },
+                            ignoreFrequencyCheck = true
+                        )
+                    } else {
+                        // Network became available, proceed with available check
+                        checkAndShowAppOpenAd(activity, adCallback)
                     }
-                },
-                ignoreFrequencyCheck = true
-            )
+                }
+            } else {
+                adCallback.onShowAdComplete()
+            }
             return
         }
 
+        checkAndShowAppOpenAd(activity, adCallback)
+    }
+
+    private fun checkAndShowAppOpenAd(activity: Activity, adCallback: OnShowAdCompleteListener) {
+        if (activity.isFinishing || activity.isDestroyed) return
+
         if (!isAdAvailable()) {
             if (isHouseAutoFallback()) {
-                adCallback.onHouseAdShown()
+                adCallback.onHouseAdShown("No AdMob ad available")
                 houseAppOpenHelper.showHouseAppOpen(
                     activity,
                     object : HouseAppOpenHelper.OnShowAdCompleteListener {
@@ -166,7 +189,7 @@ class AppOpenHelper @Inject constructor(
         // Frequency gating via AdFrequencyManager: fallback to House App Open if blocked
         if (!adFrequencyManager.canShowAppOpen()) {
             if (isHouseAdsEnabled()) {
-                adCallback.onHouseAdShown()
+                adCallback.onHouseAdShown("Frequency capped")
                 houseAppOpenHelper.showHouseAppOpen(
                     activity,
                     object : HouseAppOpenHelper.OnShowAdCompleteListener {
@@ -203,7 +226,8 @@ class AppOpenHelper @Inject constructor(
                 adLoaded.postValue(false)
                 adFrequencyManager.recordAppOpenShown()
                 if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
-                    adCallback.onHouseAdShown()
+                    val reason = adError.message.ifBlank { adError.code.toString() }
+                    adCallback.onHouseAdShown(reason)
                     houseAppOpenHelper.showHouseAppOpen(
                         activity,
                         object : HouseAppOpenHelper.OnShowAdCompleteListener {

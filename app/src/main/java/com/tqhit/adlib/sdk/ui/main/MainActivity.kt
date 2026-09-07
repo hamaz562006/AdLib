@@ -165,8 +165,8 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
                 binding.flBannerContainer,
                 60000,
                 object : BannerAdCallback() {
-                    override fun onHouseAdShown() {
-                        logMessage("Falling back to HOUSE Ad (AdMob unavailable)", "HOUSE_FALLBACK")
+                    override fun onHouseAdShown(reason: String) {
+                        logMessage("Falling back to HOUSE Ad (AdMob unavailable) - Reason: $reason", "HOUSE_FALLBACK")
                     }
 
                     override fun onAdLoaded(adView: AdView) {
@@ -199,8 +199,8 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
                 binding.flBannerContainer,
                 60000,
                 object : BannerAdCallback() {
-                    override fun onHouseAdShown() {
-                        logMessage("Falling back to HOUSE Ad (AdMob unavailable)", "HOUSE_FALLBACK")
+                    override fun onHouseAdShown(reason: String) {
+                        logMessage("Falling back to HOUSE Ad (AdMob unavailable) - Reason: $reason", "HOUSE_FALLBACK")
                     }
 
                     override fun onAdLoaded(adView: AdView) {
@@ -239,8 +239,8 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
                     this,
                     preloadedInterstitialAd!!,
                     object : InterstitialAdCallback() {
-                        override fun onHouseAdShown() {
-                            logMessage("Falling back to HOUSE Ad (AdMob unavailable)", "HOUSE_FALLBACK")
+                        override fun onHouseAdShown(reason: String) {
+                            logMessage("Falling back to HOUSE Ad (AdMob unavailable) - Reason: $reason", "HOUSE_FALLBACK")
                         }
 
                         override fun onAdClosed() {
@@ -261,8 +261,8 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
                     null,
                     60000,
                     object : InterstitialAdCallback() {
-                        override fun onHouseAdShown() {
-                            logMessage("Falling back to HOUSE Ad (AdMob unavailable)", "HOUSE_FALLBACK")
+                        override fun onHouseAdShown(reason: String) {
+                            logMessage("Falling back to HOUSE Ad (AdMob unavailable) - Reason: $reason", "HOUSE_FALLBACK")
                         }
 
                         override fun onAdClosed() {
@@ -313,8 +313,8 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
                 binding.flNativeContainer,
                 useFullLayout = false,
                 object : NativeAdCallback() {
-                    override fun onHouseAdShown() {
-                        logMessage("Falling back to HOUSE Ad (AdMob unavailable)", "HOUSE_FALLBACK")
+                    override fun onHouseAdShown(reason: String) {
+                        logMessage("Falling back to HOUSE Ad (AdMob unavailable) - Reason: $reason", "HOUSE_FALLBACK")
                     }
 
                     override fun onAdLoaded(nativeAd: NativeAd) {
@@ -353,8 +353,8 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
                 binding.flNativeContainer,
                 useFullLayout = true,
                 object : NativeAdCallback() {
-                    override fun onHouseAdShown() {
-                        logMessage("Falling back to HOUSE Ad (AdMob unavailable)", "HOUSE_FALLBACK")
+                    override fun onHouseAdShown(reason: String) {
+                        logMessage("Falling back to HOUSE Ad (AdMob unavailable) - Reason: $reason", "HOUSE_FALLBACK")
                     }
 
                     override fun onAdLoaded(nativeAd: NativeAd) {
@@ -399,8 +399,8 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
                 null,
                 60000,
                 object : RewardAdCallback() {
-                    override fun onHouseAdShown() {
-                        logMessage("Falling back to HOUSE Ad (AdMob unavailable)", "HOUSE_FALLBACK")
+                    override fun onHouseAdShown(reason: String) {
+                        logMessage("Falling back to HOUSE Ad (AdMob unavailable) - Reason: $reason", "HOUSE_FALLBACK")
                     }
 
                     override fun onUserEarnedReward(rewardItem: RewardItem?) {
@@ -431,8 +431,8 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
             appOpenHelper.showAdIfAvailable(
                 this,
                 object : AppOpenHelper.OnShowAdCompleteListener {
-                    override fun onHouseAdShown() {
-                        logMessage("Falling back to HOUSE Ad (AdMob unavailable)", "HOUSE_FALLBACK")
+                    override fun onHouseAdShown(reason: String) {
+                        logMessage("Falling back to HOUSE Ad (AdMob unavailable) - Reason: $reason", "HOUSE_FALLBACK")
                     }
 
                     override fun onShowAdComplete() {

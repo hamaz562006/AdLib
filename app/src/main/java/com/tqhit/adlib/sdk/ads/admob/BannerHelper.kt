@@ -20,6 +20,9 @@ import com.tqhit.adlib.sdk.data.local.PreferencesHelper
 import com.tqhit.adlib.sdk.firebase.FirebaseRemoteConfigHelper
 import com.tqhit.adlib.sdk.utils.Constant
 import com.tqhit.adlib.sdk.utils.NetworkUtils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -106,12 +109,39 @@ class BannerHelper @Inject constructor(
         timeoutMilliSecond: Int?,
         adCallback: BannerAdCallback?
     ) {
-        if (!NetworkUtils.isNetworkAvailable(activity) && remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)) {
-            adCallback?.onHouseAdShown()
-            houseBannerHelper.loadHouseBanner(activity, parent, createBridgedBannerCallback(adCallback))
+        if (!NetworkUtils.isNetworkAvailable(activity)) {
+            if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)) {
+                adCallback?.onHouseAdShown("Network unavailable")
+                houseBannerHelper.loadHouseBanner(activity, parent, createBridgedBannerCallback(adCallback))
+            } else {
+                adCallback?.onAdFailedToLoad(null)
+            }
             return
         }
-        val adView = loadBanner(activity, bannerAdUnitId, timeoutMilliSecond, object : BannerAdCallback() {
+
+        if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)) {
+            CoroutineScope(Dispatchers.Main).launch {
+                val reachable = NetworkUtils.isAdServerReachable()
+                if (!reachable && !activity.isFinishing && !activity.isDestroyed) {
+                    adCallback?.onHouseAdShown("Ad server unreachable (possibly blocked network)")
+                    houseBannerHelper.loadHouseBanner(activity, parent, createBridgedBannerCallback(adCallback))
+                } else if (!activity.isFinishing && !activity.isDestroyed) {
+                    executeLoadBannerWithFallback(activity, bannerAdUnitId, parent, timeoutMilliSecond, adCallback)
+                }
+            }
+        } else {
+            executeLoadBannerWithFallback(activity, bannerAdUnitId, parent, timeoutMilliSecond, adCallback)
+        }
+    }
+
+    private fun executeLoadBannerWithFallback(
+        activity: Activity,
+        bannerAdUnitId: String,
+        parent: ViewGroup,
+        timeoutMilliSecond: Int?,
+        adCallback: BannerAdCallback?
+    ) {
+        loadBanner(activity, bannerAdUnitId, timeoutMilliSecond, object : BannerAdCallback() {
             override fun onAdLoaded(adView: AdView) {
                 parent.removeAllViews()
                 parent.addView(adView)
@@ -119,7 +149,8 @@ class BannerHelper @Inject constructor(
             }
             override fun onAdFailedToLoad(adError: LoadAdError?) {
                 if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_AUTO_FALLBACK)) {
-                    adCallback?.onHouseAdShown()
+                    val reason = adError?.message ?: adError?.code?.toString() ?: "Unknown AdMob error"
+                    adCallback?.onHouseAdShown(reason)
                     houseBannerHelper.loadHouseBanner(activity, parent, createBridgedBannerCallback(adCallback))
                 } else {
                     adCallback?.onAdFailedToLoad(adError)
@@ -147,12 +178,39 @@ class BannerHelper @Inject constructor(
         timeoutMilliSecond: Int?,
         adCallback: BannerAdCallback?
     ) {
-        if (!NetworkUtils.isNetworkAvailable(activity) && remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)) {
-            adCallback?.onHouseAdShown()
-            houseBannerHelper.loadHouseBanner(activity, parent, createBridgedBannerCallback(adCallback))
+        if (!NetworkUtils.isNetworkAvailable(activity)) {
+            if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)) {
+                adCallback?.onHouseAdShown("Network unavailable")
+                houseBannerHelper.loadHouseBanner(activity, parent, createBridgedBannerCallback(adCallback))
+            } else {
+                adCallback?.onAdFailedToLoad(null)
+            }
             return
         }
-        val adView = loadCollapsibleBanner(activity, bannerAdUnitId, timeoutMilliSecond, object : BannerAdCallback() {
+
+        if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)) {
+            CoroutineScope(Dispatchers.Main).launch {
+                val reachable = NetworkUtils.isAdServerReachable()
+                if (!reachable && !activity.isFinishing && !activity.isDestroyed) {
+                    adCallback?.onHouseAdShown("Ad server unreachable (possibly blocked network)")
+                    houseBannerHelper.loadHouseBanner(activity, parent, createBridgedBannerCallback(adCallback))
+                } else if (!activity.isFinishing && !activity.isDestroyed) {
+                    executeLoadCollapsibleBannerWithFallback(activity, bannerAdUnitId, parent, timeoutMilliSecond, adCallback)
+                }
+            }
+        } else {
+            executeLoadCollapsibleBannerWithFallback(activity, bannerAdUnitId, parent, timeoutMilliSecond, adCallback)
+        }
+    }
+
+    private fun executeLoadCollapsibleBannerWithFallback(
+        activity: Activity,
+        bannerAdUnitId: String,
+        parent: ViewGroup,
+        timeoutMilliSecond: Int?,
+        adCallback: BannerAdCallback?
+    ) {
+        loadCollapsibleBanner(activity, bannerAdUnitId, timeoutMilliSecond, object : BannerAdCallback() {
             override fun onAdLoaded(adView: AdView) {
                 parent.removeAllViews()
                 parent.addView(adView)
@@ -160,7 +218,8 @@ class BannerHelper @Inject constructor(
             }
             override fun onAdFailedToLoad(adError: LoadAdError?) {
                 if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_AUTO_FALLBACK)) {
-                    adCallback?.onHouseAdShown()
+                    val reason = adError?.message ?: adError?.code?.toString() ?: "Unknown AdMob error"
+                    adCallback?.onHouseAdShown(reason)
                     houseBannerHelper.loadHouseBanner(activity, parent, createBridgedBannerCallback(adCallback))
                 } else {
                     adCallback?.onAdFailedToLoad(adError)

@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 object NetworkUtils {
     /**
@@ -24,6 +26,17 @@ object NetworkUtils {
             val activeNetworkInfo = connectivityManager.activeNetworkInfo
             @Suppress("DEPRECATION")
             activeNetworkInfo?.isConnected == true
+        }
+    }
+
+    suspend fun isAdServerReachable(timeoutMs: Int = 3000): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val socket = java.net.Socket()
+            socket.connect(java.net.InetSocketAddress("pubads.g.doubleclick.net", 443), timeoutMs)
+            socket.close()
+            true
+        } catch (e: Exception) {
+            false
         }
     }
 }

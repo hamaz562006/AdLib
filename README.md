@@ -2,6 +2,16 @@
 
 A unified Android ad management SDK built on **AdMob (GMA Next-Gen SDK)** with a built-in, fully remote-controllable **House Ads** system, smart frequency capping, and Adjust attribution — all wired together with Hilt dependency injection.
 
+## Project structure
+
+```
+AdLib/
+├── adlib/   ← the library module (com.android.library, namespace com.tqhit.adlib)
+└── demo/    ← a thin demo app (com.android.application) exercising every feature of :adlib
+```
+
+The demo app depends on the library exactly the way a consuming app would (`implementation(project(":adlib"))`), so it doubles as a living usage reference for every format and fallback scenario described below.
+
 ## Highlights
 
 - **AdMob (Next-Gen SDK)**: Banner, Collapsible Banner, Adaptive Banner, Interstitial, Rewarded, Native (small & full layouts), App Open
@@ -27,10 +37,18 @@ A unified Android ad management SDK built on **AdMob (GMA Next-Gen SDK)** with a
 
 ## Installation
 
+Add the `:adlib` module as a project dependency (e.g. as a git submodule, or once published via the included `jitpack.yml`, as a Maven coordinate from JitPack):
+
 ```kotlin
-// settings.gradle.kts / app build.gradle.kts, via the version catalog
-implementation(libs.ads.mobile.sdk) // com.google.android.libraries.ads.mobile.sdk:ads-mobile-sdk
+// your app's build.gradle.kts
+dependencies {
+    implementation(project(":adlib"))
+    // or, once published:
+    // implementation("com.github.hamaz562006:AdLib:<tag>")
+}
 ```
+
+The library brings in the Next-Gen AdMob SDK, Hilt, Firebase (Analytics + Remote Config), Adjust, Glide, and `customactivityoncrash` transitively — you don't need to declare them yourself.
 
 > **If your app (or any other dependency) still pulls in the legacy AdMob SDK**, exclude it to avoid duplicate-class conflicts between the legacy and Next-Gen SDKs:
 > ```kotlin
@@ -149,4 +167,4 @@ admobHelper.launchAdInspector(context) { error -> /* handle */ }
 
 ## Architecture
 
-Built with Hilt. Each ad format has its own `@Singleton` Helper (`InterstitialHelper`, `BannerHelper`, `RewardHelper`, `AppOpenHelper`, `NativeHelper`, `AdaptiveBannerHelper`) that talks to a shared `HouseAdManager` for fallback content, `AdFrequencyManager` for capping, `AdmobRateLimiter` for NO_FILL cooldowns, and `FirebaseRemoteConfigHelper` for configuration — so nothing needs to be wired manually beyond `initRemoteConfig`.
+Built with Hilt, split into the `:adlib` library module and a `:demo` app module (see [Project structure](#project-structure)). Each ad format has its own `@Singleton` Helper (`InterstitialHelper`, `BannerHelper`, `RewardHelper`, `AppOpenHelper`, `NativeHelper`, `AdaptiveBannerHelper`) that talks to a shared `HouseAdManager` for fallback content, `AdFrequencyManager` for capping, `AdmobRateLimiter` for NO_FILL cooldowns, and `FirebaseRemoteConfigHelper` for configuration — so nothing needs to be wired manually beyond `initRemoteConfig`.

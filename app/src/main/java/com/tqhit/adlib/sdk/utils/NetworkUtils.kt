@@ -6,8 +6,8 @@ import android.net.NetworkCapabilities
 import android.os.Build
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.net.HttpsURLConnection
 import java.net.URL
+import javax.net.ssl.HttpsURLConnection
 
 object NetworkUtils {
     /**

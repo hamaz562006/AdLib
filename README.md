@@ -18,7 +18,7 @@ A unified Android ad management SDK built on **AdMob (GMA Next-Gen SDK)** with a
 - **Granular ad lifecycle visibility**: every `*AdCallback` exposes `onHouseAdShown(reason: String)`, where `reason` is the *real* AdMob error message (or `"Frequency capped"` / `"Network unavailable"`) that triggered the fallback — no more guessing why House Ads appeared
 - **UMP/GDPR consent** helper
 - **Ad Inspector** launcher for on-device debugging
-- **Optional crash recovery screen** instead of a raw app crash
+- **Built-in crash recovery screen** (via `customactivityoncrash`) instead of a raw app crash
 
 ## Requirements
 
@@ -132,12 +132,9 @@ Ads are selected round-robin among enabled entries. If the key is missing, empty
 
 `AdFrequencyManager` tracks last-shown timestamps per format and per placement, plus a per-session impression cap. State is persisted through `PreferencesHelper` (a `SharedPreferences` + Gson wrapper) so a killed/restarted process doesn't reset the cooldown. Session counters are intentionally **not** persisted — they reset on every app launch.
 
-## Optional: crash recovery screen
+## Crash recovery screen
 
-```kotlin
-SmartAds.enableCrashHandler(application) // shows a friendly recovery screen instead of a raw crash
-```
-Not enabled automatically — call this only if you want it, since it may conflict with tools like Crashlytics that expect the default crash behavior.
+`AdLibBaseApplication` automatically installs `customactivityoncrash` (showing `AdLibCustomCrashActivity` instead of a raw crash) whenever `isDebugMode()` returns `true` — which defaults to `Constant.DEBUG_MODE`. To control this in your own app, override `isDebugMode()` in your `Application` subclass, or set `Constant.DEBUG_MODE` directly. Set it to `false` for release builds if you'd rather let a tool like Crashlytics handle crashes with its default (non-intercepted) behavior.
 
 ## Ad Inspector
 

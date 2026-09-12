@@ -6,7 +6,6 @@ import com.adjust.sdk.AdjustAdRevenue
 import com.adjust.sdk.AdjustConfig
 import com.adjust.sdk.AdjustEvent
 import com.adjust.sdk.LogLevel
-import com.google.android.gms.ads.AdValue
 import com.tqhit.adlib.sdk.utils.Constant
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject

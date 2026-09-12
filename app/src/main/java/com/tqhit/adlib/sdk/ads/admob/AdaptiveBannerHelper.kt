@@ -1,15 +1,17 @@
 package com.tqhit.adlib.sdk.ads.admob
 
 import android.app.Activity
-import android.content.Context
 import android.os.Build
 import android.util.DisplayMetrics
 import android.view.ViewGroup
 import android.view.WindowMetrics
-import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.AdSize
-import com.google.android.gms.ads.AdView
-import com.google.android.gms.ads.LoadAdError
+import com.google.android.libraries.ads.mobile.sdk.banner.AdSize
+import com.google.android.libraries.ads.mobile.sdk.banner.AdView
+import com.google.android.libraries.ads.mobile.sdk.banner.BannerAd
+import com.google.android.libraries.ads.mobile.sdk.banner.BannerAdEventCallback
+import com.google.android.libraries.ads.mobile.sdk.banner.BannerAdRequest
+import com.google.android.libraries.ads.mobile.sdk.common.AdLoadCallback
+import com.google.android.libraries.ads.mobile.sdk.common.LoadAdError
 import com.tqhit.adlib.sdk.ads.callback.admob.BannerAdCallback
 import com.tqhit.adlib.sdk.ads.callback.house.HouseBannerAdCallback
 import com.tqhit.adlib.sdk.ads.house.HouseBannerHelper
@@ -53,50 +55,54 @@ class AdaptiveBannerHelper @Inject constructor(
         callback: BannerAdCallback? = null
     ): AdView? {
         if (preferencesHelper.getBoolean(Constant.IS_PREMIUM, false)) {
-            callback?.onAdFailedToLoad(null)
+            activity.runOnUiThread { callback?.onAdFailedToLoad(null) }
             return null
         }
 
         if (remoteConfigHelper.getBoolean("bn_enable").not()) {
-            callback?.onAdFailedToLoad(null)
+            activity.runOnUiThread { callback?.onAdFailedToLoad(null) }
             return null
         }
 
         val adView = AdView(activity)
-        adView.adUnitId = adUnitId
         val adSize = getAdaptiveAdSize(activity)
-        adView.setAdSize(adSize)
+        val effectiveAdUnitId = if (Constant.DEBUG_MODE) Constant.ADMOB_BANNER_AD_UNIT_ID else adUnitId
+        val adRequest = BannerAdRequest.Builder(effectiveAdUnitId, adSize).build()
 
-        adView.adListener = object : com.google.android.gms.ads.AdListener() {
-            override fun onAdLoaded() {
-                container.removeAllViews()
-                container.addView(adView)
-                callback?.onAdLoaded(adView)
+        adView.loadAd(adRequest, object : AdLoadCallback<BannerAd> {
+            override fun onAdLoaded(ad: BannerAd) {
+                ad.adEventCallback = object : BannerAdEventCallback {
+                    override fun onAdClicked() {
+                        activity.runOnUiThread { callback?.onAdClicked() }
+                    }
+
+                    override fun onAdShowedFullScreenContent() {
+                        activity.runOnUiThread { callback?.onAdOpened() }
+                    }
+
+                    override fun onAdDismissedFullScreenContent() {
+                        activity.runOnUiThread { callback?.onAdClosed() }
+                    }
+
+                    override fun onAdImpression() {
+                        activity.runOnUiThread { callback?.onAdImpression() }
+                    }
+                }
+
+                activity.runOnUiThread {
+                    container.removeAllViews()
+                    container.addView(adView)
+                    callback?.onAdLoaded(adView)
+                }
             }
 
-            override fun onAdFailedToLoad(adError: com.google.android.gms.ads.LoadAdError) {
-                callback?.onAdFailedToLoad(adError)
+            override fun onAdFailedToLoad(adError: LoadAdError) {
+                activity.runOnUiThread {
+                    callback?.onAdFailedToLoad(adError)
+                }
             }
+        })
 
-            override fun onAdClicked() {
-                callback?.onAdClicked()
-            }
-
-            override fun onAdOpened() {
-                callback?.onAdOpened()
-            }
-
-            override fun onAdClosed() {
-                callback?.onAdClosed()
-            }
-
-            override fun onAdImpression() {
-                callback?.onAdImpression()
-            }
-        }
-
-        val adRequest = AdRequest.Builder().build()
-        adView.loadAd(adRequest)
         return adView
     }
 
@@ -108,10 +114,14 @@ class AdaptiveBannerHelper @Inject constructor(
     ) {
         if (!NetworkUtils.isNetworkAvailable(activity)) {
             if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)) {
-                callback?.onHouseAdShown("Network unavailable")
-                houseBannerHelper.loadHouseBanner(activity, container, createBridgedCallback(callback))
+                activity.runOnUiThread {
+                    callback?.onHouseAdShown("Network unavailable")
+                    houseBannerHelper.loadHouseBanner(activity, container, createBridgedCallback(activity, callback))
+                }
             } else {
-                callback?.onAdFailedToLoad(null)
+                activity.runOnUiThread {
+                    callback?.onAdFailedToLoad(null)
+                }
             }
             return
         }
@@ -120,8 +130,10 @@ class AdaptiveBannerHelper @Inject constructor(
             CoroutineScope(Dispatchers.Main).launch {
                 val reachable = NetworkUtils.isAdServerReachable()
                 if (!reachable && !activity.isFinishing && !activity.isDestroyed) {
-                    callback?.onHouseAdShown("Ad server unreachable (possibly blocked network)")
-                    houseBannerHelper.loadHouseBanner(activity, container, createBridgedCallback(callback))
+                    activity.runOnUiThread {
+                        callback?.onHouseAdShown("Ad server unreachable (possibly blocked network)")
+                        houseBannerHelper.loadHouseBanner(activity, container, createBridgedCallback(activity, callback))
+                    }
                 } else if (!activity.isFinishing && !activity.isDestroyed) {
                     executeLoadAdaptiveBannerWithFallback(activity, adUnitId, container, callback)
                 }
@@ -138,29 +150,61 @@ class AdaptiveBannerHelper @Inject constructor(
         callback: BannerAdCallback? = null
     ) {
         loadAdaptiveBanner(activity, adUnitId, container, object : BannerAdCallback() {
-            override fun onAdLoaded(adView: AdView) { callback?.onAdLoaded(adView) }
+            override fun onAdLoaded(adView: AdView) {
+                activity.runOnUiThread {
+                    callback?.onAdLoaded(adView)
+                }
+            }
+
             override fun onAdFailedToLoad(adError: LoadAdError?) {
                 if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_AUTO_FALLBACK)) {
                     val reason = adError?.message ?: adError?.code?.toString() ?: "Unknown AdMob error"
-                    callback?.onHouseAdShown(reason)
-                    houseBannerHelper.loadHouseBanner(activity, container, createBridgedCallback(callback))
+                    activity.runOnUiThread {
+                        callback?.onHouseAdShown(reason)
+                        houseBannerHelper.loadHouseBanner(activity, container, createBridgedCallback(activity, callback))
+                    }
                 } else {
-                    callback?.onAdFailedToLoad(adError)
+                    activity.runOnUiThread {
+                        callback?.onAdFailedToLoad(adError)
+                    }
                 }
             }
-            override fun onAdClicked() { callback?.onAdClicked() }
-            override fun onAdOpened() { callback?.onAdOpened() }
-            override fun onAdImpression() { callback?.onAdImpression() }
-            override fun onAdClosed() { callback?.onAdClosed() }
+
+            override fun onAdClicked() {
+                activity.runOnUiThread { callback?.onAdClicked() }
+            }
+
+            override fun onAdOpened() {
+                activity.runOnUiThread { callback?.onAdOpened() }
+            }
+
+            override fun onAdImpression() {
+                activity.runOnUiThread { callback?.onAdImpression() }
+            }
+
+            override fun onAdClosed() {
+                activity.runOnUiThread { callback?.onAdClosed() }
+            }
         })
     }
 
-    private fun createBridgedCallback(adCallback: BannerAdCallback?): HouseBannerAdCallback {
+    private fun createBridgedCallback(activity: Activity, adCallback: BannerAdCallback?): HouseBannerAdCallback {
         return object : HouseBannerAdCallback() {
-            override fun onAdImpression() { adCallback?.onAdImpression() }
-            override fun onAdClicked() { adCallback?.onAdClicked() }
-            override fun onAdClosed() { adCallback?.onAdClosed() }
-            override fun onAdFailedToLoad(errorMessage: String) { adCallback?.onAdFailedToLoad(null) }
+            override fun onAdImpression() {
+                activity.runOnUiThread { adCallback?.onAdImpression() }
+            }
+
+            override fun onAdClicked() {
+                activity.runOnUiThread { adCallback?.onAdClicked() }
+            }
+
+            override fun onAdClosed() {
+                activity.runOnUiThread { adCallback?.onAdClosed() }
+            }
+
+            override fun onAdFailedToLoad(errorMessage: String) {
+                activity.runOnUiThread { adCallback?.onAdFailedToLoad(null) }
+            }
         }
     }
 }

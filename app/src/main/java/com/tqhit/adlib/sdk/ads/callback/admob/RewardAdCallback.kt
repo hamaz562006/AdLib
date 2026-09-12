@@ -1,9 +1,9 @@
 package com.tqhit.adlib.sdk.ads.callback.admob
 
-import com.google.android.gms.ads.AdError
-import com.google.android.gms.ads.LoadAdError
-import com.google.android.gms.ads.rewarded.RewardItem
-import com.google.android.gms.ads.rewarded.RewardedAd
+import com.google.android.libraries.ads.mobile.sdk.common.FullScreenContentError
+import com.google.android.libraries.ads.mobile.sdk.common.LoadAdError
+import com.google.android.libraries.ads.mobile.sdk.rewarded.RewardItem
+import com.google.android.libraries.ads.mobile.sdk.rewarded.RewardedAd
 
 open class RewardAdCallback {
     open fun onAdClicked() {}
@@ -12,7 +12,7 @@ open class RewardAdCallback {
 
     open fun onAdFailedToLoad(adError: LoadAdError? = null) {}
 
-    open fun onAdFailedToShowFullScreenContent(var0: AdError? = null) {}
+    open fun onAdFailedToShowFullScreenContent(var0: FullScreenContentError? = null) {}
 
     open fun onAdImpression() {}
 

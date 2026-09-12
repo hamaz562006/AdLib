@@ -9,7 +9,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.OnLifecycleEvent
 import androidx.lifecycle.ProcessLifecycleOwner
 import cat.ereza.customactivityoncrash.config.CaocConfig
-import com.google.android.gms.ads.AdActivity
+import com.google.android.libraries.ads.mobile.sdk.common.AdActivity
 import com.tqhit.adlib.sdk.ui.crash.AdLibCustomCrashActivity
 import com.tqhit.adlib.sdk.utils.Constant
 

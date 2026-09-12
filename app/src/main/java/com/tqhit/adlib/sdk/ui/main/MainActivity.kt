@@ -5,13 +5,13 @@ import android.os.Handler
 import android.os.Looper
 import android.view.LayoutInflater
 import android.widget.Toast
-import com.google.android.gms.ads.AdView
-import com.google.android.gms.ads.LoadAdError
-import com.google.android.gms.ads.interstitial.InterstitialAd
-import com.google.android.gms.ads.nativead.NativeAd
-import com.google.android.gms.ads.nativead.NativeAdView
-import com.google.android.gms.ads.rewarded.RewardItem
-import com.google.android.gms.ads.rewarded.RewardedAd
+import com.google.android.libraries.ads.mobile.sdk.banner.AdView
+import com.google.android.libraries.ads.mobile.sdk.common.LoadAdError
+import com.google.android.libraries.ads.mobile.sdk.interstitial.InterstitialAd
+import com.google.android.libraries.ads.mobile.sdk.nativead.NativeAd
+import com.google.android.libraries.ads.mobile.sdk.nativead.NativeAdView
+import com.google.android.libraries.ads.mobile.sdk.rewarded.RewardItem
+import com.google.android.libraries.ads.mobile.sdk.rewarded.RewardedAd
 import com.google.android.ump.FormError
 import com.tqhit.adlib.R
 import com.tqhit.adlib.databinding.ActivityMainBinding
@@ -234,10 +234,11 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
         // Show Interstitial
         binding.btnShowInterstitial.setOnClickListener {
             logMessage("Requesting AdMob Interstitial Ad...", "INTERSTITIAL")
-            if (preloadedInterstitialAd != null) {
+            val preloaded = preloadedInterstitialAd
+            if (preloaded != null) {
                 interstitialHelper.showInterstitial(
                     this,
-                    preloadedInterstitialAd!!,
+                    preloaded,
                     object : InterstitialAdCallback() {
                         override fun onHouseAdShown(reason: String) {
                             logMessage("Falling back to HOUSE Ad (AdMob unavailable) - Reason: $reason", "HOUSE_FALLBACK")

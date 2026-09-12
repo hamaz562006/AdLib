@@ -1,7 +1,7 @@
 package com.tqhit.adlib.sdk.ads.callback.admob
 
-import com.google.android.gms.ads.LoadAdError
-import com.google.android.gms.ads.nativead.NativeAd
+import com.google.android.libraries.ads.mobile.sdk.common.LoadAdError
+import com.google.android.libraries.ads.mobile.sdk.nativead.NativeAd
 
 open class NativeAdCallback {
     open fun onAdClicked() {}

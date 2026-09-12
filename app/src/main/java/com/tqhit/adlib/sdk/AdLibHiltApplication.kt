@@ -18,6 +18,7 @@ import com.tqhit.adlib.sdk.firebase.FirebaseRemoteConfigHelper
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
+// TODO: Coarse Location Collection: Google announced that GMA Next-Gen SDK will collect coarse location by default unless disabled via a configuration flag. In version 1.4.0 (installed), this configuration flag is not yet present in the public API (RequestConfiguration / InitializationConfig / MobileAds). Re-check in subsequent SDK updates and configure accordingly.
 @HiltAndroidApp
 open class AdLibHiltApplication : AdLibBaseApplication() {
     protected val APP_AOA_CONFIG_KEY = "APP_AOA"

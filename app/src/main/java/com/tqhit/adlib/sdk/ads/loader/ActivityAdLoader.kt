@@ -4,11 +4,11 @@ import android.app.Activity
 import android.util.Log
 import android.widget.FrameLayout
 import androidx.lifecycle.MutableLiveData
-import com.google.android.gms.ads.AdView
-import com.google.android.gms.ads.LoadAdError
-import com.google.android.gms.ads.interstitial.InterstitialAd
-import com.google.android.gms.ads.nativead.NativeAd
-import com.google.android.gms.ads.rewarded.RewardedAd
+import com.google.android.libraries.ads.mobile.sdk.banner.AdView
+import com.google.android.libraries.ads.mobile.sdk.common.LoadAdError
+import com.google.android.libraries.ads.mobile.sdk.interstitial.InterstitialAd
+import com.google.android.libraries.ads.mobile.sdk.nativead.NativeAd
+import com.google.android.libraries.ads.mobile.sdk.rewarded.RewardedAd
 import com.tqhit.adlib.sdk.ads.AdFrequencyManager
 import com.tqhit.adlib.sdk.ads.admob.AdmobHelper
 import com.tqhit.adlib.sdk.ads.callback.admob.BannerAdCallback

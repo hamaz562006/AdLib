@@ -5,14 +5,15 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.util.Log
 import android.view.ViewGroup
-import androidx.lifecycle.MutableLiveData
-import com.google.android.gms.ads.AdView
-import com.google.android.gms.ads.MobileAds
-import com.google.android.gms.ads.RequestConfiguration
-import com.google.android.gms.ads.interstitial.InterstitialAd
-import com.google.android.gms.ads.nativead.NativeAd
-import com.google.android.gms.ads.nativead.NativeAdView
-import com.google.android.gms.ads.rewarded.RewardedAd
+import com.google.android.libraries.ads.mobile.sdk.MobileAds
+import com.google.android.libraries.ads.mobile.sdk.banner.AdView
+import com.google.android.libraries.ads.mobile.sdk.common.AdInspectorError
+import com.google.android.libraries.ads.mobile.sdk.common.RequestConfiguration
+import com.google.android.libraries.ads.mobile.sdk.initialization.InitializationConfig
+import com.google.android.libraries.ads.mobile.sdk.interstitial.InterstitialAd
+import com.google.android.libraries.ads.mobile.sdk.nativead.NativeAd
+import com.google.android.libraries.ads.mobile.sdk.nativead.NativeAdView
+import com.google.android.libraries.ads.mobile.sdk.rewarded.RewardedAd
 import com.tqhit.adlib.sdk.ads.callback.admob.BannerAdCallback
 import com.tqhit.adlib.sdk.ads.callback.admob.InterstitialAdCallback
 import com.tqhit.adlib.sdk.ads.callback.admob.NativeAdCallback
@@ -33,16 +34,45 @@ class AdmobHelper @Inject constructor(
     private val nativeHelper: NativeHelper,
     private val appOpenHelper: AppOpenHelper
 ) {
-    private val TAG : String = AdmobHelper::class.java.simpleName
+    private val TAG: String = AdmobHelper::class.java.simpleName
 
+    // Coarse Location Collection flag state
+    private var isLocationCollectionEnabled: Boolean = false
+
+    /**
+     * Expose configuration for coarse location collection.
+     * Note: In GMA Next-Gen SDK version 1.4.0, Google has not yet exposed the public API flag
+     * in RequestConfiguration or InitializationConfig. This method tracks state and is prepared
+     * to bind directly once exposed in upcoming SDK updates.
+     */
+    fun setLocationCollectionEnabled(enabled: Boolean) {
+        isLocationCollectionEnabled = enabled
+        Log.d(TAG, "Location collection enabled set to: $enabled (Pending Next-Gen SDK API flag availability)")
+    }
+
+    // TODO: Coarse Location Collection: Google announced that GMA Next-Gen SDK will collect coarse location by default unless disabled via a configuration flag. In version 1.4.0 (installed), this configuration flag is not yet present in the public API (RequestConfiguration / InitializationConfig / MobileAds). Re-check in subsequent SDK updates and configure accordingly.
     fun initAdmob(onComplete: () -> Unit, testDeviceIds: List<String>? = null) {
         CoroutineScope(Dispatchers.IO).launch {
-            MobileAds.setRequestConfiguration(
-                RequestConfiguration.Builder()
-                    .setTestDeviceIds(testDeviceIds ?: listOf())
-                    .build()
-            )
-            MobileAds.initialize(context) { _ ->
+            val appId = try {
+                val ai = context.packageManager.getApplicationInfo(
+                    context.packageName,
+                    android.content.pm.PackageManager.GET_META_DATA
+                )
+                ai.metaData?.getString("com.google.android.gms.ads.APPLICATION_ID")
+                    ?: "ca-app-pub-3940256099942544~3347511713"
+            } catch (e: Exception) {
+                "ca-app-pub-3940256099942544~3347511713"
+            }
+
+            val requestConfig = RequestConfiguration.Builder()
+                .setTestDeviceIds(testDeviceIds ?: listOf())
+                .build()
+
+            val initConfig = InitializationConfig.Builder(appId)
+                .setRequestConfiguration(requestConfig)
+                .build()
+
+            MobileAds.initialize(context, initConfig) { _ ->
                 Log.d(TAG, "Admob initialized")
                 onComplete()
             }
@@ -53,13 +83,8 @@ class AdmobHelper @Inject constructor(
         if (context == null) return false
         val systemService = context.getSystemService(Context.CONNECTIVITY_SERVICE)
         val connectivityManager = systemService as ConnectivityManager
-        if (connectivityManager.activeNetworkInfo != null) {
-            val activeNetworkInfo = connectivityManager.activeNetworkInfo
-            if (activeNetworkInfo?.isConnected == true) {
-                return true
-            }
-        }
-        return false
+        val activeNetworkInfo = connectivityManager.activeNetworkInfo
+        return activeNetworkInfo?.isConnected == true
     }
 
     fun loadBanner(
@@ -67,7 +92,7 @@ class AdmobHelper @Inject constructor(
         bannerAdUnitId: String,
         timeoutMilliSecond: Int?,
         adCallback: BannerAdCallback?
-    ) : AdView? {
+    ): AdView? {
         return bannerHelper.loadBanner(
             activity,
             bannerAdUnitId,
@@ -81,7 +106,7 @@ class AdmobHelper @Inject constructor(
         bannerAdUnitId: String,
         timeoutMilliSecond: Int?,
         adCallback: BannerAdCallback?
-    ) : AdView? {
+    ): AdView? {
         return bannerHelper.loadCollapsibleBanner(
             activity,
             bannerAdUnitId,
@@ -142,6 +167,38 @@ class AdmobHelper @Inject constructor(
         )
     }
 
+    fun showBannerWithFallback(
+        activity: Activity,
+        bannerAdUnitId: String,
+        parent: ViewGroup,
+        timeoutMilliSecond: Int?,
+        adCallback: BannerAdCallback?
+    ) {
+        bannerHelper.showBannerWithFallback(
+            activity,
+            bannerAdUnitId,
+            parent,
+            timeoutMilliSecond,
+            adCallback
+        )
+    }
+
+    fun showCollapsibleBannerWithFallback(
+        activity: Activity,
+        bannerAdUnitId: String,
+        parent: ViewGroup,
+        timeoutMilliSecond: Int?,
+        adCallback: BannerAdCallback?
+    ) {
+        bannerHelper.showCollapsibleBannerWithFallback(
+            activity,
+            bannerAdUnitId,
+            parent,
+            timeoutMilliSecond,
+            adCallback
+        )
+    }
+
     fun loadInterstitial(
         context: Context,
         interstitialAdUnitId: String,
@@ -152,18 +209,6 @@ class AdmobHelper @Inject constructor(
             context,
             interstitialAdUnitId,
             timeoutMilliSecond,
-            adCallback
-        )
-    }
-
-    fun showInterstitial(
-        activity: Activity,
-        interstitialAd: InterstitialAd,
-        adCallback: InterstitialAdCallback?
-    ) {
-        interstitialHelper.showInterstitial(
-            activity,
-            interstitialAd,
             adCallback
         )
     }
@@ -184,16 +229,44 @@ class AdmobHelper @Inject constructor(
         )
     }
 
+    fun showInterstitial(
+        activity: Activity,
+        interstitialAd: InterstitialAd,
+        adCallback: InterstitialAdCallback?
+    ) {
+        interstitialHelper.showInterstitial(
+            activity,
+            interstitialAd,
+            adCallback
+        )
+    }
+
     fun loadReward(
         context: Context,
         rewardAdUnitId: String,
-        timeOutMilliSecond: Int?,
+        timeoutMilliSecond: Int?,
         adCallback: RewardAdCallback?
     ) {
         rewardHelper.loadReward(
             context,
             rewardAdUnitId,
-            timeOutMilliSecond,
+            timeoutMilliSecond,
+            adCallback
+        )
+    }
+
+    fun showReward(
+        activity: Activity,
+        rewardAdUnitId: String,
+        rewardedAd: RewardedAd?,
+        timeoutMilliSecond: Int?,
+        adCallback: RewardAdCallback?
+    ) {
+        rewardHelper.showReward(
+            activity,
+            rewardAdUnitId,
+            rewardedAd,
+            timeoutMilliSecond,
             adCallback
         )
     }
@@ -210,32 +283,34 @@ class AdmobHelper @Inject constructor(
         )
     }
 
-    fun showReward(
-        activity: Activity,
-        rewardAdUnitId: String,
-        rewardedAd: RewardedAd?,
-        timeOutMilliSecond: Int?,
-        adCallback: RewardAdCallback?
-    ) {
-        rewardHelper.showReward(
-            activity,
-            rewardAdUnitId,
-            rewardedAd,
-            timeOutMilliSecond,
-            adCallback
-        )
-    }
-
     fun loadNative(
         context: Context,
         nativeAdUnitId: String,
-        timeOutMilliSecond: Int?,
+        timeoutMilliSecond: Int?,
         adCallback: NativeAdCallback?
     ) {
         nativeHelper.loadNative(
             context,
             nativeAdUnitId,
-            timeOutMilliSecond,
+            timeoutMilliSecond,
+            adCallback
+        )
+    }
+
+    fun loadNativeWithFallback(
+        context: Context,
+        nativeAdUnitId: String,
+        timeoutMilliSecond: Int?,
+        container: ViewGroup,
+        useFullLayout: Boolean,
+        adCallback: NativeAdCallback?
+    ) {
+        nativeHelper.loadNativeWithFallback(
+            context,
+            nativeAdUnitId,
+            timeoutMilliSecond,
+            container,
+            useFullLayout,
             adCallback
         )
     }
@@ -266,11 +341,15 @@ class AdmobHelper @Inject constructor(
             override fun onShowAdComplete() {
                 adCallback?.onShowAdComplete()
             }
+
+            override fun onHouseAdShown(reason: String) {
+                adCallback?.onHouseAdShown(reason)
+            }
         })
     }
 
-    fun launchAdInspector(context: Context, onComplete: ((error: com.google.android.gms.ads.AdInspectorError?) -> Unit)? = null) {
-        MobileAds.openAdInspector(context) { error ->
+    fun launchAdInspector(context: Context, onComplete: ((error: AdInspectorError?) -> Unit)? = null) {
+        MobileAds.openAdInspector { error ->
             onComplete?.invoke(error)
         }
     }

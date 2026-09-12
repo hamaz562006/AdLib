@@ -38,6 +38,13 @@ class AdmobConsentHelper @Inject constructor(
         consentInformation.reset()
     }
 
+    /**
+     * Expose configuration for coarse location collection.
+     */
+    fun setLocationCollectionEnabled(enabled: Boolean) {
+        // Tracked for GMA Next-Gen SDK updates when configuration flag is exposed in public API
+    }
+
     fun gatherConsent(
         activity: Activity,
         consentCallback: IAdmobConsentCallback,

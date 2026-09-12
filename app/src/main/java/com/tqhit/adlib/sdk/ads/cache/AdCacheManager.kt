@@ -1,8 +1,8 @@
 package com.tqhit.adlib.sdk.ads.cache
 
 import android.os.SystemClock
-import com.google.android.gms.ads.interstitial.InterstitialAd
-import com.google.android.gms.ads.rewarded.RewardedAd
+import com.google.android.libraries.ads.mobile.sdk.interstitial.InterstitialAd
+import com.google.android.libraries.ads.mobile.sdk.rewarded.RewardedAd
 import javax.inject.Inject
 import javax.inject.Singleton
 

@@ -1,22 +1,25 @@
 package com.tqhit.adlib.sdk.ads.admob
 
+import android.app.Activity
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.RatingBar
 import android.widget.TextView
 import androidx.appcompat.widget.AppCompatButton
-import androidx.lifecycle.MutableLiveData
-import com.google.android.gms.ads.AdListener
-import com.google.android.gms.ads.AdLoader
-import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.AdValue
-import com.google.android.gms.ads.LoadAdError
-import com.google.android.gms.ads.VideoOptions
-import com.google.android.gms.ads.nativead.NativeAd
-import com.google.android.gms.ads.nativead.NativeAdOptions
-import com.google.android.gms.ads.nativead.NativeAdView
+import com.google.android.libraries.ads.mobile.sdk.common.AdValue
+import com.google.android.libraries.ads.mobile.sdk.common.LoadAdError
+import com.google.android.libraries.ads.mobile.sdk.common.VideoOptions
+import com.google.android.libraries.ads.mobile.sdk.nativead.MediaView
+import com.google.android.libraries.ads.mobile.sdk.nativead.NativeAd
+import com.google.android.libraries.ads.mobile.sdk.nativead.NativeAdEventCallback
+import com.google.android.libraries.ads.mobile.sdk.nativead.NativeAdLoader
+import com.google.android.libraries.ads.mobile.sdk.nativead.NativeAdLoaderCallback
+import com.google.android.libraries.ads.mobile.sdk.nativead.NativeAdRequest
+import com.google.android.libraries.ads.mobile.sdk.nativead.NativeAdView
 import com.tqhit.adlib.R
 import com.tqhit.adlib.sdk.ads.callback.admob.NativeAdCallback
 import com.tqhit.adlib.sdk.ads.callback.house.HouseNativeAdCallback
@@ -40,13 +43,27 @@ class NativeHelper @Inject constructor(
     private val preferencesHelper: PreferencesHelper,
     private val houseNativeHelper: HouseNativeHelper
 ) {
+    private val mainHandler = Handler(Looper.getMainLooper())
+
     private fun isAdEnabled() =
         remoteConfigHelper.getBoolean("nt_enable")
                 && !preferencesHelper.getBoolean(Constant.IS_PREMIUM, false)
-    
 
-    private fun getAdRequest(timeout: Int = 60000): AdRequest {
-        return AdRequest.Builder().setHttpTimeoutMillis(timeout).build()
+    private fun runOnUiThread(action: () -> Unit) {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            action()
+        } else {
+            mainHandler.post(action)
+        }
+    }
+
+    private fun getNativeAdRequest(adUnitId: String): NativeAdRequest {
+        val videoOptions = VideoOptions.Builder()
+            .setStartMuted(true)
+            .build()
+        return NativeAdRequest.Builder(adUnitId, listOf(NativeAd.NativeAdType.NATIVE))
+            .setVideoOptions(videoOptions)
+            .build()
     }
 
     fun loadNativeWithFallback(
@@ -59,10 +76,14 @@ class NativeHelper @Inject constructor(
     ) {
         if (!NetworkUtils.isNetworkAvailable(context)) {
             if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)) {
-                adCallback?.onHouseAdShown("Network unavailable")
-                showHouseFallback(context, container, useFullLayout, adCallback)
+                runOnUiThread {
+                    adCallback?.onHouseAdShown("Network unavailable")
+                    showHouseFallback(context, container, useFullLayout, adCallback)
+                }
             } else {
-                adCallback?.onAdFailedToLoad(null)
+                runOnUiThread {
+                    adCallback?.onAdFailedToLoad(null)
+                }
             }
             return
         }
@@ -71,8 +92,10 @@ class NativeHelper @Inject constructor(
             CoroutineScope(Dispatchers.Main).launch {
                 val reachable = NetworkUtils.isAdServerReachable()
                 if (!reachable) {
-                    adCallback?.onHouseAdShown("Ad server unreachable (possibly blocked network)")
-                    showHouseFallback(context, container, useFullLayout, adCallback)
+                    runOnUiThread {
+                        adCallback?.onHouseAdShown("Ad server unreachable (possibly blocked network)")
+                        showHouseFallback(context, container, useFullLayout, adCallback)
+                    }
                 } else {
                     executeLoadNativeWithFallback(context, nativeAdUnitId, timeOutMilliSecond, container, useFullLayout, adCallback)
                 }
@@ -92,20 +115,36 @@ class NativeHelper @Inject constructor(
     ) {
         loadNative(context, nativeAdUnitId, timeOutMilliSecond, object : NativeAdCallback() {
             override fun onAdLoaded(nativeAd: NativeAd) {
-                adCallback?.onAdLoaded(nativeAd)
+                runOnUiThread {
+                    adCallback?.onAdLoaded(nativeAd)
+                }
             }
+
             override fun onAdFailedToLoad(adError: LoadAdError?) {
                 if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_AUTO_FALLBACK)) {
                     val reason = adError?.message ?: adError?.code?.toString() ?: "Unknown AdMob error"
-                    adCallback?.onHouseAdShown(reason)
-                    showHouseFallback(context, container, useFullLayout, adCallback)
+                    runOnUiThread {
+                        adCallback?.onHouseAdShown(reason)
+                        showHouseFallback(context, container, useFullLayout, adCallback)
+                    }
                 } else {
-                    adCallback?.onAdFailedToLoad(adError)
+                    runOnUiThread {
+                        adCallback?.onAdFailedToLoad(adError)
+                    }
                 }
             }
-            override fun onAdClicked() { adCallback?.onAdClicked() }
-            override fun onAdImpression() { adCallback?.onAdImpression() }
-            override fun onAdClosed() { adCallback?.onAdClosed() }
+
+            override fun onAdClicked() {
+                runOnUiThread { adCallback?.onAdClicked() }
+            }
+
+            override fun onAdImpression() {
+                runOnUiThread { adCallback?.onAdImpression() }
+            }
+
+            override fun onAdClosed() {
+                runOnUiThread { adCallback?.onAdClosed() }
+            }
         })
     }
 
@@ -116,10 +155,21 @@ class NativeHelper @Inject constructor(
         adCallback: NativeAdCallback?
     ) {
         val bridge = object : HouseNativeAdCallback() {
-            override fun onAdImpression() { adCallback?.onAdImpression() }
-            override fun onAdClicked() { adCallback?.onAdClicked() }
-            override fun onAdClosed() { adCallback?.onAdClosed() }
-            override fun onAdFailedToLoad(errorMessage: String) { adCallback?.onAdFailedToLoad(null) }
+            override fun onAdImpression() {
+                runOnUiThread { adCallback?.onAdImpression() }
+            }
+
+            override fun onAdClicked() {
+                runOnUiThread { adCallback?.onAdClicked() }
+            }
+
+            override fun onAdClosed() {
+                runOnUiThread { adCallback?.onAdClosed() }
+            }
+
+            override fun onAdFailedToLoad(errorMessage: String) {
+                runOnUiThread { adCallback?.onAdFailedToLoad(null) }
+            }
         }
         if (useFullLayout) {
             houseNativeHelper.showHouseNativeFull(context, container, bridge)
@@ -135,68 +185,68 @@ class NativeHelper @Inject constructor(
         adCallback: NativeAdCallback?
     ) {
         if (!isAdEnabled() || !admobConsentHelper.canRequestAds()) {
-            adCallback?.onAdFailedToLoad()
+            runOnUiThread { adCallback?.onAdFailedToLoad() }
             return
         }
 
         analyticsTracker.logEvent("aj_native_load")
 
         val adUnitId = if (Constant.DEBUG_MODE) Constant.ADMOB_NATIVE_AD_UNIT_ID else nativeAdUnitId
-        val videoOption = VideoOptions.Builder()
-            .setStartMuted(true)
-            .build()
-        val adOptions = NativeAdOptions.Builder()
-            .setVideoOptions(videoOption)
-            .build()
-        val adLoader = AdLoader.Builder(context, adUnitId)
-            .forNativeAd { nativeAd ->
-                nativeAd.apply {
-                    setOnPaidEventListener { adValue: AdValue ->
+        val nativeAdRequest = getNativeAdRequest(adUnitId)
+
+        NativeAdLoader.load(nativeAdRequest, object : NativeAdLoaderCallback {
+            override fun onNativeAdLoaded(nativeAd: NativeAd) {
+                nativeAd.adEventCallback = object : NativeAdEventCallback {
+                    override fun onAdImpression() {
+                        runOnUiThread {
+                            adCallback?.onAdImpression()
+                        }
+                    }
+
+                    override fun onAdClicked() {
+                        runOnUiThread {
+                            adCallback?.onAdClicked()
+                            analyticsTracker.logEvent("aj_native_click")
+                        }
+                    }
+
+                    override fun onAdDismissedFullScreenContent() {
+                        runOnUiThread {
+                            adCallback?.onAdClosed()
+                            analyticsTracker.logEvent("aj_native_close")
+                        }
+                    }
+
+                    override fun onAdPaid(adValue: AdValue) {
                         analyticsTracker.trackAdMobRevenueEvent(
                             adValue,
                             adUnitId,
-                            nativeAd.responseInfo?.loadedAdapterResponseInfo?.adSourceName
-                                ?: "AdMob",
+                            nativeAd.getResponseInfo().loadedAdSourceResponseInfo?.name ?: "AdMob",
                             "Native"
                         )
                     }
                 }
-                adCallback?.onAdLoaded(nativeAd)
-                analyticsTracker.logEvent("aj_native_load_success")
+
+                runOnUiThread {
+                    adCallback?.onAdLoaded(nativeAd)
+                    analyticsTracker.logEvent("aj_native_load_success")
+                }
             }
-            .withAdListener(object : AdListener() {
-                override fun onAdFailedToLoad(adError: LoadAdError) {
+
+            override fun onAdFailedToLoad(adError: LoadAdError) {
+                runOnUiThread {
                     adCallback?.onAdFailedToLoad(adError)
                     analyticsTracker.logEvent("aj_native_load_fail")
                 }
-
-                override fun onAdImpression() {
-                    super.onAdImpression()
-                    adCallback?.onAdImpression()
-                }
-
-                override fun onAdClosed() {
-                    super.onAdClosed()
-                    adCallback?.onAdClosed()
-                    analyticsTracker.logEvent("aj_native_close")
-                }
-
-                override fun onAdClicked() {
-                    super.onAdClicked()
-                    adCallback?.onAdClicked()
-                    analyticsTracker.logEvent("aj_native_click")
-                }
-            })
-            .withNativeAdOptions(adOptions)
-            .build()
-        adLoader.loadAd(getAdRequest(timeOutMilliSecond ?: 60000))
+            }
+        })
     }
 
     fun showNative(
         nativeAd: NativeAd,
         nativeAdView: NativeAdView
     ) {
-        nativeAdView.mediaView = nativeAdView.findViewById(R.id.ad_media)
+        val mediaView = nativeAdView.findViewById<MediaView>(R.id.ad_media)
         nativeAdView.headlineView = nativeAdView.findViewById(R.id.ad_headline)
         nativeAdView.bodyView = nativeAdView.findViewById(R.id.ad_body)
         nativeAdView.callToActionView = nativeAdView.findViewById(R.id.ad_call_to_action)
@@ -275,7 +325,7 @@ class NativeHelper @Inject constructor(
             }
         }
 
-        nativeAdView.setNativeAd(nativeAd)
+        nativeAdView.registerNativeAd(nativeAd, mediaView)
         analyticsTracker.logEvent("aj_native_show_success")
     }
 }

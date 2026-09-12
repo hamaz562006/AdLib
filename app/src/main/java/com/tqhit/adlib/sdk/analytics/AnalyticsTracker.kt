@@ -1,6 +1,6 @@
 package com.tqhit.adlib.sdk.analytics
 
-import com.google.android.gms.ads.AdValue
+import com.google.android.libraries.ads.mobile.sdk.common.AdValue
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.tqhit.adlib.sdk.adjust.AdjustAnalyticsHelper
 import com.tqhit.adlib.sdk.firebase.FirebaseAnalyticsHelper

@@ -2,15 +2,18 @@ package com.tqhit.adlib.sdk.ads.admob
 
 import android.app.Activity
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
-import com.google.android.gms.ads.AdError
-import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.AdValue
-import com.google.android.gms.ads.FullScreenContentCallback
-import com.google.android.gms.ads.LoadAdError
-import com.google.android.gms.ads.OnPaidEventListener
-import com.google.android.gms.ads.rewarded.RewardedAd
-import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
+import com.google.android.libraries.ads.mobile.sdk.common.AdLoadCallback
+import com.google.android.libraries.ads.mobile.sdk.common.AdRequest
+import com.google.android.libraries.ads.mobile.sdk.common.AdValue
+import com.google.android.libraries.ads.mobile.sdk.common.FullScreenContentError
+import com.google.android.libraries.ads.mobile.sdk.common.LoadAdError
+import com.google.android.libraries.ads.mobile.sdk.rewarded.OnUserEarnedRewardListener
+import com.google.android.libraries.ads.mobile.sdk.rewarded.RewardItem
+import com.google.android.libraries.ads.mobile.sdk.rewarded.RewardedAd
+import com.google.android.libraries.ads.mobile.sdk.rewarded.RewardedAdEventCallback
 import com.tqhit.adlib.sdk.ads.AdFrequencyManager
 import com.tqhit.adlib.sdk.ads.callback.admob.RewardAdCallback
 import com.tqhit.adlib.sdk.ads.callback.house.HouseRewardAdCallback
@@ -38,6 +41,8 @@ class RewardHelper @Inject constructor(
     private val houseRewardHelper: HouseRewardHelper
 ) {
     private val TAG = RewardHelper::class.java.simpleName
+    private val mainHandler = Handler(Looper.getMainLooper())
+
     private fun isAdEnabled() =
         remoteConfigHelper.getBoolean("rv_enable")
                 && !preferencesHelper.getBoolean(Constant.IS_PREMIUM, false)
@@ -48,35 +53,45 @@ class RewardHelper @Inject constructor(
     private fun isHouseAutoFallback() =
         remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_AUTO_FALLBACK)
 
+    private fun runOnUiThread(action: () -> Unit) {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            action()
+        } else {
+            mainHandler.post(action)
+        }
+    }
+
     private fun createBridgedHouseCallback(adCallback: RewardAdCallback?): HouseRewardAdCallback {
         return object : HouseRewardAdCallback() {
             override fun onAdImpression() {
-                adCallback?.onAdImpression()
+                runOnUiThread { adCallback?.onAdImpression() }
             }
 
             override fun onAdClicked() {
-                adCallback?.onAdClicked()
+                runOnUiThread { adCallback?.onAdClicked() }
             }
 
             override fun onAdClosed() {
-                adCallback?.onAdClosed()
+                runOnUiThread { adCallback?.onAdClosed() }
             }
 
             override fun onAdFailedToLoad(errorMessage: String) {
-                adCallback?.onAdFailedToLoad(null)
+                runOnUiThread { adCallback?.onAdFailedToLoad(null) }
             }
 
             override fun onUserEarnedReward(rewardAmount: Int, rewardType: String) {
-                // Call standard Google reward item callback with null since RewardItem cannot be mocked
-                adCallback?.onUserEarnedReward(null)
-                // Also call the dedicated hook for house reward
-                adCallback?.onHouseRewardEarned(rewardAmount, rewardType)
+                runOnUiThread {
+                    // Call standard Google reward item callback with null since RewardItem cannot be mocked
+                    adCallback?.onUserEarnedReward(null)
+                    // Also call the dedicated hook for house reward
+                    adCallback?.onHouseRewardEarned(rewardAmount, rewardType)
+                }
             }
         }
     }
 
-    private fun getAdRequest(timeout: Int = 60000): AdRequest {
-        return AdRequest.Builder().setHttpTimeoutMillis(timeout).build()
+    private fun getAdRequest(adUnitId: String): AdRequest {
+        return AdRequest.Builder(adUnitId).build()
     }
 
     fun showReward(
@@ -89,10 +104,12 @@ class RewardHelper @Inject constructor(
         // If device is offline and House Ads are enabled, show House Reward immediately
         if (!NetworkUtils.isNetworkAvailable(activity)) {
             if (isHouseAdsEnabled()) {
-                adCallback?.onHouseAdShown("Network unavailable")
-                houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
+                runOnUiThread {
+                    adCallback?.onHouseAdShown("Network unavailable")
+                    houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
+                }
             } else {
-                adCallback?.onAdFailedToLoad()
+                runOnUiThread { adCallback?.onAdFailedToLoad() }
             }
             return
         }
@@ -127,56 +144,62 @@ class RewardHelper @Inject constructor(
     ) {
         if (!isAdEnabled() || !admobConsentHelper.canRequestAds()) {
             if (isHouseAdsEnabled()) {
-                adCallback?.onHouseAdShown("AdMob disabled or consent missing")
-                houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
+                runOnUiThread {
+                    adCallback?.onHouseAdShown("AdMob disabled or consent missing")
+                    houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
+                }
             } else {
-                adCallback?.onAdFailedToLoad()
+                runOnUiThread { adCallback?.onAdFailedToLoad() }
             }
             return
         }
 
         if (rewardedAd == null) {
             val loadingAdsDialog = LoadingAdsDialog(activity)
-            if (!activity.isFinishing && !activity.isDestroyed)
+            if (!activity.isFinishing && !activity.isDestroyed) {
                 loadingAdsDialog.show()
+            }
             loadReward(activity, rewardAdUnitId, timeOutMilliSecond, object : RewardAdCallback() {
-                override fun onAdLoaded(rewardedAd: RewardedAd) {
-                    showReward(activity, rewardedAd, adCallback)
-                    if (loadingAdsDialog.isShowing) {
-                        loadingAdsDialog.dismiss()
+                override fun onAdLoaded(loadedRewardedAd: RewardedAd) {
+                    runOnUiThread {
+                        if (loadingAdsDialog.isShowing) {
+                            loadingAdsDialog.dismiss()
+                        }
+                        showReward(activity, loadedRewardedAd, adCallback)
                     }
                 }
 
                 override fun onAdFailedToLoad(adError: LoadAdError?) {
-                    if (loadingAdsDialog.isShowing) {
-                        loadingAdsDialog.dismiss()
-                    }
-                    if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
-                        val reason = adError?.message ?: adError?.code?.toString() ?: "Unknown AdMob error"
-                        adCallback?.onHouseAdShown(reason)
-                        houseRewardHelper.showHouseReward(
-                            activity,
-                            object : HouseRewardAdCallback() {
-                                override fun onAdImpression() { adCallback?.onAdImpression() }
-                                override fun onAdClicked() { adCallback?.onAdClicked() }
-                                override fun onAdClosed() { adCallback?.onAdClosed() }
-                                override fun onUserEarnedReward(rewardAmount: Int, rewardType: String) {
-                                    adCallback?.onUserEarnedReward(null)
-                                    adCallback?.onHouseRewardEarned(rewardAmount, rewardType)
-                                }
-                                override fun onAdFailedToLoad(errorMessage: String) {
-                                    adCallback?.onAdFailedToLoad(adError)
-                                }
-                            },
-                            ignoreFrequencyCheck = true
-                        )
-                    } else {
-                        adCallback?.onAdFailedToLoad(adError)
+                    runOnUiThread {
+                        if (loadingAdsDialog.isShowing) {
+                            loadingAdsDialog.dismiss()
+                        }
+                        if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
+                            val reason = adError?.message ?: adError?.code?.toString() ?: "Unknown AdMob error"
+                            adCallback?.onHouseAdShown(reason)
+                            houseRewardHelper.showHouseReward(
+                                activity,
+                                object : HouseRewardAdCallback() {
+                                    override fun onAdImpression() { adCallback?.onAdImpression() }
+                                    override fun onAdClicked() { adCallback?.onAdClicked() }
+                                    override fun onAdClosed() { adCallback?.onAdClosed() }
+                                    override fun onUserEarnedReward(rewardAmount: Int, rewardType: String) {
+                                        adCallback?.onUserEarnedReward(null)
+                                        adCallback?.onHouseRewardEarned(rewardAmount, rewardType)
+                                    }
+                                    override fun onAdFailedToLoad(errorMessage: String) {
+                                        adCallback?.onAdFailedToLoad(adError)
+                                    }
+                                },
+                                ignoreFrequencyCheck = true
+                            )
+                        } else {
+                            adCallback?.onAdFailedToLoad(adError)
+                        }
                     }
                 }
             })
-        }
-        else {
+        } else {
             showReward(activity, rewardedAd, adCallback)
         }
     }
@@ -188,67 +211,74 @@ class RewardHelper @Inject constructor(
     ) {
         if (!isAdEnabled() || !admobConsentHelper.canRequestAds()) {
             if (isHouseAdsEnabled()) {
-                adCallback?.onHouseAdShown("AdMob disabled or consent missing")
-                houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
+                runOnUiThread {
+                    adCallback?.onHouseAdShown("AdMob disabled or consent missing")
+                    houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
+                }
             } else {
-                adCallback?.onAdFailedToLoad()
+                runOnUiThread { adCallback?.onAdFailedToLoad() }
             }
             return
         }
 
         analyticsTracker.logEvent("aj_reward_show")
-        rewardedAd.apply {
-            onPaidEventListener = OnPaidEventListener { adValue: AdValue ->
-                analyticsTracker.trackAdMobRevenueEvent(
-                    adValue,
-                    rewardedAd.adUnitId,
-                    rewardedAd.responseInfo.loadedAdapterResponseInfo?.adSourceName
-                        ?: "AdMob",
-                    "Reward"
-                )
-            }
-            fullScreenContentCallback = object : FullScreenContentCallback() {
-                override fun onAdDismissedFullScreenContent() {
-                    super.onAdDismissedFullScreenContent()
+        rewardedAd.adEventCallback = object : RewardedAdEventCallback {
+            override fun onAdDismissedFullScreenContent() {
+                runOnUiThread {
                     adFrequencyManager.recordRewardedShown()
                     adCallback?.onAdClosed()
                     analyticsTracker.logEvent("aj_reward_close")
                 }
+            }
 
-                override fun onAdFailedToShowFullScreenContent(var0: AdError) {
-                    super.onAdFailedToShowFullScreenContent(var0)
+            override fun onAdFailedToShowFullScreenContent(error: FullScreenContentError) {
+                runOnUiThread {
                     if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
-                        val reason = var0.message.ifBlank { var0.code.toString() }
+                        val reason = error.message.ifBlank { error.code.toString() }
                         adCallback?.onHouseAdShown(reason)
                         houseRewardHelper.showHouseReward(activity, createBridgedHouseCallback(adCallback), ignoreFrequencyCheck = true)
                     } else {
-                        adCallback?.onAdFailedToShowFullScreenContent(var0)
+                        adCallback?.onAdFailedToShowFullScreenContent(error)
                     }
                     analyticsTracker.logEvent("aj_reward_show_fail")
                 }
+            }
 
-                override fun onAdShowedFullScreenContent() {
-                    super.onAdShowedFullScreenContent()
+            override fun onAdShowedFullScreenContent() {
+                runOnUiThread {
                     analyticsTracker.logEvent("aj_reward_show_success")
                 }
+            }
 
-                override fun onAdImpression() {
-                    super.onAdImpression()
+            override fun onAdImpression() {
+                runOnUiThread {
                     adCallback?.onAdImpression()
                 }
+            }
 
-                override fun onAdClicked() {
-                    super.onAdClicked()
+            override fun onAdClicked() {
+                runOnUiThread {
                     adCallback?.onAdClicked()
                     analyticsTracker.logEvent("aj_reward_click")
                 }
             }
+
+            override fun onAdPaid(adValue: AdValue) {
+                analyticsTracker.trackAdMobRevenueEvent(
+                    adValue,
+                    rewardedAd.adUnitId,
+                    rewardedAd.getResponseInfo().loadedAdSourceResponseInfo?.name ?: "AdMob",
+                    "Reward"
+                )
+            }
         }
-        rewardedAd.show(activity, { rewardItem ->
-            adCallback?.onUserEarnedReward(rewardItem)
+
+        rewardedAd.show(activity, OnUserEarnedRewardListener { rewardItem ->
+            runOnUiThread {
+                adCallback?.onUserEarnedReward(rewardItem)
+            }
         })
     }
-    
 
     fun loadReward(
         context: Context,
@@ -257,12 +287,12 @@ class RewardHelper @Inject constructor(
         adCallback: RewardAdCallback?
     ) {
         if (!NetworkUtils.isNetworkAvailable(context)) {
-            adCallback?.onAdFailedToLoad(null)
+            runOnUiThread { adCallback?.onAdFailedToLoad(null) }
             return
         }
 
         if (!isAdEnabled() || !admobConsentHelper.canRequestAds()) {
-            adCallback?.onAdFailedToLoad(null)
+            runOnUiThread { adCallback?.onAdFailedToLoad(null) }
             return
         }
 
@@ -272,29 +302,34 @@ class RewardHelper @Inject constructor(
         if (!adMobRateLimiter.canRequest(adUnitId)) {
             Log.w(TAG, "Rewarded adUnitId $adUnitId is in NO_FILL cooldown")
             val noFillError = LoadAdError(
-                com.google.android.gms.ads.AdRequest.ERROR_CODE_NO_FILL,
+                LoadAdError.ErrorCode.NO_FILL,
                 "در کولداون NO_FILL",
-                "com.google.android.gms.ads",
-                null,
                 null
             )
-            adCallback?.onAdFailedToLoad(noFillError)
-            analyticsTracker.logEvent("aj_reward_load_fail_cooldown")
+            runOnUiThread {
+                adCallback?.onAdFailedToLoad(noFillError)
+                analyticsTracker.logEvent("aj_reward_load_fail_cooldown")
+            }
             return
         }
 
-        RewardedAd.load(context, adUnitId, getAdRequest(timeOutMilliSecond ?: 60000), object: RewardedAdLoadCallback() {
-            override fun onAdFailedToLoad(adError: LoadAdError) {
-                if (adError.code == com.google.android.gms.ads.AdRequest.ERROR_CODE_NO_FILL) {
-                    adMobRateLimiter.recordNoFill(adUnitId)
+        val adRequest = getAdRequest(adUnitId)
+        RewardedAd.load(adRequest, object : AdLoadCallback<RewardedAd> {
+            override fun onAdLoaded(ad: RewardedAd) {
+                runOnUiThread {
+                    analyticsTracker.logEvent("aj_reward_load_success")
+                    adCallback?.onAdLoaded(ad)
                 }
-                analyticsTracker.logEvent("aj_reward_load_fail")
-                adCallback?.onAdFailedToLoad(adError)
             }
 
-            override fun onAdLoaded(rewardedAd: RewardedAd) {
-                analyticsTracker.logEvent("aj_reward_load_success")
-                adCallback?.onAdLoaded(rewardedAd)
+            override fun onAdFailedToLoad(adError: LoadAdError) {
+                if (adError.code == LoadAdError.ErrorCode.NO_FILL) {
+                    adMobRateLimiter.recordNoFill(adUnitId)
+                }
+                runOnUiThread {
+                    analyticsTracker.logEvent("aj_reward_load_fail")
+                    adCallback?.onAdFailedToLoad(adError)
+                }
             }
         })
     }

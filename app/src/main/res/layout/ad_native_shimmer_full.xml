@@ -65,7 +65,7 @@
                     android:layout_marginLeft="10dp"
                     android:layout_marginRight="10dp"
                     android:maxLines="3"/>
-                <com.google.android.gms.ads.nativead.MediaView
+                <com.google.android.libraries.ads.mobile.sdk.nativead.MediaView
                     android:layout_gravity="center_horizontal"
                     android:id="@+id/ad_media"
                     android:background="@color/lightTransparent"

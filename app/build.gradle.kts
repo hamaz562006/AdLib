@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "com.aistudio.adlib.clmwqf"
-        minSdk = 21
+        minSdk = 24
         targetSdk = 35
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -59,6 +59,11 @@ android {
 }
 
 dependencies {
+    // Exclude legacy play-services-ads to ensure 100% Next-Gen SDK usage
+    configurations.all {
+        exclude(group = "com.google.android.gms", module = "play-services-ads")
+        exclude(group = "com.google.android.gms", module = "play-services-ads-lite")
+    }
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -72,7 +77,7 @@ dependencies {
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.config)
-    implementation(libs.play.services.ads)
+    implementation(libs.ads.mobile.sdk)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

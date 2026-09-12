@@ -13,3 +13,17 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Build outputs and downloaded binaries should never be committed to the repo root
+*.apk
+*.aar
+*.bin
+*.ipa
+*.aab
+
+# Environment/secret files
+.env
+.env.*
+
+# AI tooling scratch files
+metadata.json

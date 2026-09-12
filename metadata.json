@@ -1,6 +1,0 @@
-{
-  "name": "AdLib",
-  "description": "An Android advertisement and analytics SDK demonstrator and helper utility.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

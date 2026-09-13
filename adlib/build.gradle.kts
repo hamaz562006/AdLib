@@ -1,0 +1,86 @@
+plugins {
+    id("com.android.library")
+    alias(libs.plugins.kotlin.android)
+    id("com.google.dagger.hilt.android")
+    id("kotlin-kapt")
+}
+
+android {
+    namespace = "com.tqhit.adlib"
+    compileSdk = 35
+
+    defaultConfig {
+        minSdk = 24
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles("consumer-rules.pro")
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+    kotlinOptions {
+        jvmTarget = "11"
+    }
+
+    buildFeatures {
+        viewBinding = true
+        buildConfig = true
+    }
+
+    dataBinding {
+        enable = true
+    }
+}
+
+dependencies {
+    // Exclude legacy play-services-ads to ensure 100% Next-Gen SDK usage
+    configurations.all {
+        exclude(group = "com.google.android.gms", module = "play-services-ads")
+        exclude(group = "com.google.android.gms", module = "play-services-ads-lite")
+    }
+
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.material)
+    implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.databinding.runtime)
+    implementation(libs.androidx.lifecycle.process)
+
+    implementation(libs.adjust.android)
+    implementation(libs.installreferrer)
+    implementation(libs.play.services.ads.identifier)
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.config)
+    implementation(libs.ads.mobile.sdk)
+
+    implementation(libs.lottie)
+    implementation(libs.shimmer)
+    implementation(libs.gson)
+    implementation(libs.glide)
+    implementation(libs.ssp.android)
+    implementation(libs.sdp.android)
+
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.android.compiler)
+
+    implementation(libs.customactivityoncrash)
+
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+}
+
+kapt {
+    correctErrorTypes = true
+}

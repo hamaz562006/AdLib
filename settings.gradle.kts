@@ -20,4 +20,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "AdLib"
-include(":app")
+include(":demo")
+include(":adlib")

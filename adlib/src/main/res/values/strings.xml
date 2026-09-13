@@ -1,0 +1,10 @@
+<resources>
+    <string name="error_occurred">An error occurred. We\'re deeply sorry.</string>
+    <string name="error_details">Error details :</string>
+    <string name="unknown_exception">Unknown exception</string>
+    <string name="restart_app">Restart app</string>
+    <string name="close_app">Close app</string>
+    <string name="loading_ads">Loading Ads...</string>
+    <string name="please_wait_until_setup_process_is_complete">Please wait until setup process is complete.</string>
+    <string name="this_action_can_contain_ads">This action can contain ads</string>
+</resources>

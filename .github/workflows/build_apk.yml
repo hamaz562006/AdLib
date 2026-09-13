@@ -30,13 +30,13 @@ jobs:
         env:
           GOOGLE_SERVICES_JSON_SECRET: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
-          mkdir -p app
+          mkdir -p demo
           if [ -n "$GOOGLE_SERVICES_JSON_SECRET" ]; then
-            echo "$GOOGLE_SERVICES_JSON_SECRET" > app/google-services.json
+            echo "$GOOGLE_SERVICES_JSON_SECRET" > demo/google-services.json
             echo "Loaded google-services.json from repository secret."
-          elif [ ! -f app/google-services.json ]; then
+          elif [ ! -f demo/google-services.json ]; then
             echo "Creating fallback google-services.json for CI build..."
-            cat << 'EOF' > app/google-services.json
+            cat << 'EOF' > demo/google-services.json
           {
             "project_info": {
               "project_number": "81261688838",
@@ -91,5 +91,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AdLib-Debug-APK
-          path: app/build/outputs/apk/debug/*.apk
+          path: demo/build/outputs/apk/debug/*.apk
           retention-days: 30

@@ -17,4 +17,14 @@
         <item name="android:minHeight">15px</item>
         <item name="android:text">Ad</item>
     </style>
+    <style name="DialogAnimation" parent="">
+        <item name="android:windowEnterAnimation">@anim/anim_dialog_show</item>
+        <item name="android:windowExitAnimation">@anim/anim_dialog_hide</item>
+    </style>
+    <style name="ActivityAnimation">
+        <item name="android:activityOpenEnterAnimation">@anim/enter_zoom_out</item>
+        <item name="android:activityOpenExitAnimation">@anim/exit_zoom_in</item>
+        <item name="android:activityCloseEnterAnimation">@anim/enter_zoom_out1</item>
+        <item name="android:activityCloseExitAnimation">@anim/exit_zoom_in</item>
+    </style>
 </resources>

@@ -193,6 +193,10 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
                     override fun onAdClosed() {
                         logMessage("Banner closed", "INFO")
                     }
+
+                    override fun onDiagnosticInfo(message: String) {
+                        logMessage(message, "DIAGNOSTIC")
+                    }
                 }
             )
         }
@@ -226,6 +230,10 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
 
                     override fun onAdClosed() {
                         logMessage("Collapsible Banner closed", "INFO")
+                    }
+
+                    override fun onDiagnosticInfo(message: String) {
+                        logMessage(message, "DIAGNOSTIC")
                     }
                 }
             )

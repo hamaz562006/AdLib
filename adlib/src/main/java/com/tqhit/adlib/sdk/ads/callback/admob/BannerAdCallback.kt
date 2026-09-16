@@ -18,5 +18,7 @@ open class BannerAdCallback {
 
     open fun onHouseAdShown(reason: String) {}
 
+    open fun onDiagnosticInfo(message: String) {}
+
     fun onAdSwipeGestureClicked() {}
 }

@@ -182,6 +182,10 @@ class BannerHelper @Inject constructor(
             override fun onAdClosed() {
                 activity.runOnUiThread { adCallback?.onAdClosed() }
             }
+
+            override fun onDiagnosticInfo(message: String) {
+                activity.runOnUiThread { adCallback?.onDiagnosticInfo(message) }
+            }
         })
     }
 
@@ -284,6 +288,10 @@ class BannerHelper @Inject constructor(
             override fun onAdClosed() {
                 activity.runOnUiThread { adCallback?.onAdClosed() }
             }
+
+            override fun onDiagnosticInfo(message: String) {
+                activity.runOnUiThread { adCallback?.onDiagnosticInfo(message) }
+            }
         })
     }
 
@@ -301,6 +309,8 @@ class BannerHelper @Inject constructor(
         val adView = AdView(activity)
         val effectiveAdUnitId = if (Constant.DEBUG_MODE) Constant.ADMOB_BANNER_AD_UNIT_ID else bannerAdUnitId
         val adSize = getAdSize(activity)
+        android.util.Log.d("ADLIB_DIAGNOSTIC", "Computed AdSize: width=${adSize.width}, height=${adSize.height}")
+        adCallback?.onDiagnosticInfo("Computed AdSize: width=${adSize.width}, height=${adSize.height}")
         val adRequest = getAdRequest(effectiveAdUnitId, adSize)
 
         adView.setLayerType(View.LAYER_TYPE_SOFTWARE, null)
@@ -378,6 +388,8 @@ class BannerHelper @Inject constructor(
         val adView = AdView(activity)
         val effectiveAdUnitId = if (Constant.DEBUG_MODE) Constant.ADMOB_COLLAPSIBLE_BANNER_AD_UNIT_ID else bannerAdUnitId
         val adSize = getAdSize(activity)
+        android.util.Log.d("ADLIB_DIAGNOSTIC", "Computed AdSize: width=${adSize.width}, height=${adSize.height}")
+        adCallback?.onDiagnosticInfo("Computed AdSize: width=${adSize.width}, height=${adSize.height}")
         val adRequest = getCollapsibleAdRequest(effectiveAdUnitId, adSize)
 
         adView.setLayerType(View.LAYER_TYPE_SOFTWARE, null)

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+
+    <!-- Soft circular ambient background -->
+    <path
+        android:fillColor="#F0F4FF"
+        android:pathData="M48,48m-42,0a42,42 0,1 1,84 0a42,42 0,1 1,-84 0" />
+
+    <!-- Megaphone handle -->
+    <path
+        android:fillColor="#1E3A8A"
+        android:pathData="M33,53 L28,70 C27.6,71.5 28.6,73 30.2,73 L34.5,73 C35.8,73 36.9,72 37.2,70.7 L40.5,55 Z" />
+
+    <!-- Handle accent grip lines -->
+    <path
+        android:strokeColor="#3B82F6"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:pathData="M30,64 L36,64 M29,68 L34,68" />
+
+    <!-- Megaphone rear cap / base -->
+    <path
+        android:fillColor="#1D4ED8"
+        android:pathData="M22,39 C19.5,39 17.5,41 17.5,43.5 L17.5,52.5 C17.5,55 19.5,57 22,57 L26,57 L26,39 Z" />
+
+    <!-- Main Megaphone Horn / Cone -->
+    <path
+        android:fillColor="#2563EB"
+        android:pathData="M26,39 L57,25 C58.2,24.5 59.5,25.4 59.5,26.7 L59.5,69.3 C59.5,70.6 58.2,71.5 57,71 L26,57 Z" />
+
+    <!-- Megaphone Cone Highlight / Top facet -->
+    <path
+        android:fillColor="#3B82F6"
+        android:pathData="M26,39 L57,25 C58.2,24.5 59.5,25.4 59.5,26.7 L59.5,46 L26,47 Z" />
+
+    <!-- Front speaker rim / bell -->
+    <path
+        android:fillColor="#60A5FA"
+        android:pathData="M58,25 C60.2,25 62,34.8 62,48 C62,61.2 60.2,71 58,71 C55.8,71 54,61.2 54,48 C54,34.8 55.8,25 58,25 Z" />
+
+    <path
+        android:fillColor="#1E3A8A"
+        android:pathData="M58.5,32 C59.8,32 61,39.2 61,48 C61,56.8 59.8,64 58.5,64 C57.2,64 56,56.8 56,48 C56,39.2 57.2,32 58.5,32 Z" />
+
+    <!-- Prominent "AD" Badge on the body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M31,43 L49,43 C51.2,43 53,44.8 53,47 L53,49 C53,51.2 51.2,53 49,53 L31,53 C28.8,53 27,51.2 27,49 L27,47 C27,44.8 28.8,43 31,43 Z" />
+
+    <!-- "A" in AD Badge -->
+    <path
+        android:strokeColor="#1E3A8A"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M33,51 L35.5,45 L38,51 M34,49.2 L37,49.2" />
+
+    <!-- "D" in AD Badge -->
+    <path
+        android:strokeColor="#1E3A8A"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M41,45 L43.5,45 C45.5,45 46.5,46.2 46.5,48 C46.5,49.8 45.5,51 43.5,51 L41,51 Z" />
+
+    <!-- Radiating Sound Waves / Broadcast Arcs -->
+    <!-- Arc 1 (Inner wave) -->
+    <path
+        android:strokeColor="#3B82F6"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M67,39 C70.5,41.5 72.5,44.5 72.5,48 C72.5,51.5 70.5,54.5 67,57" />
+
+    <!-- Arc 2 (Outer wave) -->
+    <path
+        android:strokeColor="#2563EB"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M74,33 C79.5,37 83,42 83,48 C83,54 79.5,59 74,63" />
+
+    <!-- Sparkle / Star 1 (Top right) -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M77,20 L78.2,23.5 L81.5,24.5 L78.2,25.5 L77,29 L75.8,25.5 L72.5,24.5 L75.8,23.5 Z" />
+
+    <!-- Sparkle / Star 2 (Bottom right) -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M81,67 L81.8,69.5 L84,70.2 L81.8,71 L81,73.5 L80.2,71 L78,70.2 L80.2,69.5 Z" />
+
+</vector>

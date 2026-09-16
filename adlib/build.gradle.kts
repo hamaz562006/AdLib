@@ -64,7 +64,6 @@ dependencies {
     implementation(libs.firebase.config)
     implementation(libs.ads.mobile.sdk)
 
-    implementation(libs.lottie)
     implementation(libs.shimmer)
     implementation(libs.gson)
     implementation(libs.glide)

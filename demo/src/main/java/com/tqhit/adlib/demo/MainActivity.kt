@@ -41,6 +41,7 @@ import com.tqhit.adlib.sdk.analytics.AnalyticsTracker
 import com.tqhit.adlib.sdk.base.ui.AdLibBaseActivity
 import com.tqhit.adlib.sdk.data.local.PreferencesHelper
 import com.tqhit.adlib.sdk.firebase.FirebaseRemoteConfigHelper
+import com.tqhit.adlib.sdk.ui.SdkWarmupOverlay
 import com.tqhit.adlib.sdk.utils.Constant
 import dagger.hilt.android.AndroidEntryPoint
 import java.text.SimpleDateFormat
@@ -65,6 +66,7 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
     @Inject lateinit var preferencesHelper: PreferencesHelper
     @Inject lateinit var adFrequencyManager: AdFrequencyManager
     @Inject lateinit var activityAdLoader: ActivityAdLoader
+    @Inject lateinit var sdkWarmupOverlay: SdkWarmupOverlay
 
     private var preloadedInterstitialAd: InterstitialAd? = null
     private var currentNativeAd: NativeAd? = null
@@ -86,6 +88,10 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
     override fun setupData() {
         super.setupData()
 
+        sdkWarmupOverlay.show(this) {
+            logMessage("SDK warmup complete, UI fully interactive", "INIT")
+        }
+
         logMessage("AdLib SDK Initializing...", "INIT")
         updateNetworkStatus()
         refreshRemoteConfigDisplay()
@@ -93,6 +99,7 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
 
         // Initialize Remote Config & AdMob on start
         remoteConfigHelper.fetchAndActivate({ success ->
+            sdkWarmupOverlay.markRemoteConfigReady()
             logMessage("Remote Config fetch result: $success", if (success) "SUCCESS" else "WARN")
             runOnUiThread {
                 refreshRemoteConfigDisplay()
@@ -100,6 +107,7 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
         }, R.xml.remote_config_defaults)
 
         admobHelper.initAdmob({
+            sdkWarmupOverlay.markAdMobReady()
             logMessage("AdMob SDK initialized successfully", "SUCCESS")
             appOpenHelper.setAdUnitId(Constant.ADMOB_AOA_AD_UNIT_ID)
             appOpenHelper.loadAd(applicationContext)

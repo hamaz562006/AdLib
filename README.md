@@ -86,6 +86,41 @@ class MainActivity : AppCompatActivity() {
 }
 ```
 
+### Optional: SDK warmup overlay (only if you have no splash screen)
+
+If your app does **not** already have a splash screen and needs a brief blocking wait during cold start to guarantee AdMob and Firebase Remote Config are initialized before triggering the first App Open Ad or Banner request, you can use `SdkWarmupOverlay`:
+
+> ⚠️ **Warning:** If your app already displays a native or custom splash screen while cold-starting, **do not** call `sdkWarmupOverlay.show()`. Showing both back-to-back doubles the perceived wait time for the user. This overlay is strictly opt-in and is never displayed automatically.
+
+```kotlin
+@AndroidEntryPoint
+class MainActivity : AppCompatActivity() {
+    @Inject lateinit var sdkWarmupOverlay: SdkWarmupOverlay
+    @Inject lateinit var remoteConfigHelper: FirebaseRemoteConfigHelper
+    @Inject lateinit var admobHelper: AdmobHelper
+    @Inject lateinit var appOpenHelper: AppOpenHelper
+
+    override fun setupData() {
+        super.setupData()
+
+        // Show overlay with safety timeout (4s fail-safe)
+        sdkWarmupOverlay.show(this) {
+            // Called when both ready or when timeout expires
+        }
+
+        remoteConfigHelper.fetchAndActivate({ success ->
+            sdkWarmupOverlay.markRemoteConfigReady()
+        }, R.xml.remote_config_defaults)
+
+        admobHelper.initAdmob({
+            sdkWarmupOverlay.markAdMobReady()
+            appOpenHelper.setAdUnitId(Constant.ADMOB_AOA_AD_UNIT_ID)
+            appOpenHelper.loadAd(applicationContext)
+        })
+    }
+}
+```
+
 ## How the AdMob ↔ House Ads fallback works
 
 Each ad placement is configured with a small JSON object in Remote Config:

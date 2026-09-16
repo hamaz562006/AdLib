@@ -8,19 +8,17 @@
     android:focusable="true"
     android:visibility="visible">
 
-    <com.airbnb.lottie.LottieAnimationView
+    <ImageView
         android:id="@+id/anim_loading"
         android:layout_width="@dimen/_100sdp"
         android:layout_height="@dimen/_100sdp"
         android:background="@android:color/transparent"
+        android:contentDescription="@string/loading_ads"
+        android:src="@drawable/ic_ad_loading_megaphone"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_centerInParent="true"
-        app:lottie_autoPlay="true"
-        app:lottie_loop="true"
-        app:lottie_rawRes="@raw/loading" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <TextView
         android:id="@+id/loading_language_text"

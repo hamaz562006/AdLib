@@ -97,21 +97,23 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
         refreshRemoteConfigDisplay()
         refreshFrequencyStatus()
 
-        // Initialize Remote Config & AdMob on start
-        remoteConfigHelper.fetchAndActivate({ success ->
-            sdkWarmupOverlay.markRemoteConfigReady()
-            logMessage("Remote Config fetch result: $success", if (success) "SUCCESS" else "WARN")
-            runOnUiThread {
-                refreshRemoteConfigDisplay()
+        val app = application as DemoApplication
+        app.addReadyListener(
+            onAdMobReady = {
+                sdkWarmupOverlay.markAdMobReady()
+                runOnUiThread {
+                    logMessage("AdMob SDK ready in Application", "SUCCESS")
+                }
+            },
+            onRemoteConfigReady = {
+                sdkWarmupOverlay.markRemoteConfigReady()
+                runOnUiThread {
+                    logMessage("Remote Config ready in Application", "SUCCESS")
+                    refreshRemoteConfigDisplay()
+                    refreshFrequencyStatus()
+                }
             }
-        }, R.xml.remote_config_defaults)
-
-        admobHelper.initAdmob({
-            sdkWarmupOverlay.markAdMobReady()
-            logMessage("AdMob SDK initialized successfully", "SUCCESS")
-            appOpenHelper.setAdUnitId(Constant.ADMOB_AOA_AD_UNIT_ID)
-            appOpenHelper.loadAd(applicationContext)
-        })
+        )
 
         // Request UMP Consent
         Handler(Looper.getMainLooper()).postDelayed({

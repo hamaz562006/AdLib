@@ -28,8 +28,47 @@ open class AdLibHiltApplication : AdLibBaseApplication() {
     @Inject lateinit var remoteConfigHelper: FirebaseRemoteConfigHelper
     @Inject lateinit var activityAdLoader: ActivityAdLoader
 
+    private var isAdMobReady = false
+    private var isRemoteConfigReady = false
+    private var pendingShowAOA = false
+
+    private val adMobReadyListeners = mutableListOf<() -> Unit>()
+    private val remoteConfigReadyListeners = mutableListOf<() -> Unit>()
+
     override fun onCreateExt() {
         super.onCreateExt()
+    }
+
+    fun isAdMobInitReady(): Boolean = isAdMobReady
+    fun isRemoteConfigInitReady(): Boolean = isRemoteConfigReady
+
+    fun addReadyListener(onAdMobReady: (() -> Unit)?, onRemoteConfigReady: (() -> Unit)?) {
+        if (onAdMobReady != null) {
+            if (isAdMobReady) {
+                onAdMobReady()
+            } else {
+                adMobReadyListeners.add(onAdMobReady)
+            }
+        }
+        if (onRemoteConfigReady != null) {
+            if (isRemoteConfigReady) {
+                onRemoteConfigReady()
+            } else {
+                remoteConfigReadyListeners.add(onRemoteConfigReady)
+            }
+        }
+    }
+
+    fun initAll(@XmlRes defaultConfig: Int, adjustToken: String? = null) {
+        initRemoteConfig(defaultConfig) { success ->
+            isRemoteConfigReady = true
+            val listeners = remoteConfigReadyListeners.toList()
+            remoteConfigReadyListeners.clear()
+            listeners.forEach { it() }
+
+            initAdmobAndAOA()
+        }
+        adjustToken?.let { initTracker(it) }
     }
 
     fun initRemoteConfig(@XmlRes defaultConfig: Int,
@@ -39,6 +78,22 @@ open class AdLibHiltApplication : AdLibBaseApplication() {
 
     fun initTracker(token: String) {
         adjustAnalyticsHelper.initAdjust(token)
+    }
+
+    fun initAdmobAndAOA() {
+        admobHelper.initAdmob({
+            isAdMobReady = true
+            initAOA()
+
+            val listeners = adMobReadyListeners.toList()
+            adMobReadyListeners.clear()
+            listeners.forEach { it() }
+
+            if (pendingShowAOA) {
+                pendingShowAOA = false
+                showAOA()
+            }
+        })
     }
 
     fun initAOA() {
@@ -58,6 +113,11 @@ open class AdLibHiltApplication : AdLibBaseApplication() {
     }
 
     override fun showAOA() {
+        if (!isAdMobReady) {
+            pendingShowAOA = true
+            return
+        }
+
         super.showAOA()
 
         if (currentActivity == null) return

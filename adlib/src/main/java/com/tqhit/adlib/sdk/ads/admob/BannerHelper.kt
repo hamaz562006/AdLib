@@ -40,6 +40,16 @@ class BannerHelper @Inject constructor(
         remoteConfigHelper.getBoolean("bn_enable")
                 && !preferencesHelper.getBoolean(Constant.IS_PREMIUM, false)
 
+    /**
+     * Resolves the effective ad unit ID: a matching Remote Config key takes priority (so a
+     * production ad unit ID can be swapped after publishing without a new release); falls back
+     * to the ID passed in code if the RC key is missing/blank.
+     */
+    private fun resolveAdUnitId(rcKey: String, fallback: String): String {
+        val rcValue = remoteConfigHelper.getString(rcKey)
+        return if (rcValue.isNotBlank()) rcValue else fallback
+    }
+
     private fun getAdSize(activity: Activity): AdSize {
         val displayMetrics = DisplayMetrics()
         @Suppress("DEPRECATION")
@@ -307,7 +317,7 @@ class BannerHelper @Inject constructor(
         }
         analyticsTracker.logEvent("aj_banner_load")
         val adView = AdView(activity)
-        val effectiveAdUnitId = if (Constant.DEBUG_MODE) Constant.ADMOB_BANNER_AD_UNIT_ID else bannerAdUnitId
+        val effectiveAdUnitId = resolveAdUnitId(Constant.RC_BN_AD_UNIT_ID, bannerAdUnitId)
         val adSize = getAdSize(activity)
         android.util.Log.d("ADLIB_DIAGNOSTIC", "Computed AdSize: width=${adSize.width}, height=${adSize.height}")
         adCallback?.onDiagnosticInfo("Computed AdSize: width=${adSize.width}, height=${adSize.height}")
@@ -364,7 +374,7 @@ class BannerHelper @Inject constructor(
                 activity.runOnUiThread {
                     adCallback?.onAdFailedToLoad(loadAdError)
                     analyticsTracker.logEvent("aj_banner_load_fail", mapOf(
-                        "ad_unit_id" to bannerAdUnitId,
+                        "ad_unit_id" to effectiveAdUnitId,
                         "ad_error_message" to loadAdError.message
                     ))
                 }
@@ -386,7 +396,7 @@ class BannerHelper @Inject constructor(
         }
         analyticsTracker.logEvent("aj_banner_load")
         val adView = AdView(activity)
-        val effectiveAdUnitId = if (Constant.DEBUG_MODE) Constant.ADMOB_COLLAPSIBLE_BANNER_AD_UNIT_ID else bannerAdUnitId
+        val effectiveAdUnitId = resolveAdUnitId(Constant.RC_C_BN_AD_UNIT_ID, bannerAdUnitId)
         val adSize = getAdSize(activity)
         android.util.Log.d("ADLIB_DIAGNOSTIC", "Computed AdSize: width=${adSize.width}, height=${adSize.height}")
         adCallback?.onDiagnosticInfo("Computed AdSize: width=${adSize.width}, height=${adSize.height}")
@@ -443,7 +453,7 @@ class BannerHelper @Inject constructor(
                 activity.runOnUiThread {
                     adCallback?.onAdFailedToLoad(loadAdError)
                     analyticsTracker.logEvent("aj_banner_load_fail", mapOf(
-                        "ad_unit_id" to bannerAdUnitId,
+                        "ad_unit_id" to effectiveAdUnitId,
                         "ad_error_message" to loadAdError.message
                     ))
                 }

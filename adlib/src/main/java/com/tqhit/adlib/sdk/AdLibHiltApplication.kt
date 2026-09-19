@@ -6,6 +6,7 @@ import androidx.annotation.XmlRes
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.Observer
 import com.tqhit.adlib.sdk.adjust.AdjustAnalyticsHelper
 import com.tqhit.adlib.sdk.ads.admob.AdmobHelper
 import com.tqhit.adlib.sdk.ads.admob.AppOpenHelper
@@ -22,6 +23,7 @@ open class AdLibHiltApplication : AdLibBaseApplication() {
     protected val APP_AOA_CONFIG_KEY = "APP_AOA"
 
     @Inject lateinit var admobHelper: AdmobHelper
+    @Inject lateinit var appOpenHelper: AppOpenHelper
     @Inject lateinit var houseAdHelper: HouseAdHelper
     @Inject lateinit var analyticsTracker: AnalyticsTracker
     @Inject lateinit var adjustAnalyticsHelper: AdjustAnalyticsHelper
@@ -59,14 +61,19 @@ open class AdLibHiltApplication : AdLibBaseApplication() {
         }
     }
 
-    fun initAll(@XmlRes defaultConfig: Int, adjustToken: String? = null) {
+    /**
+     * @param testDeviceIds Hashed device IDs to register as AdMob test devices (physical devices
+     * are NOT auto-registered the way emulators are — see Constant.TEST_DEVICE_IDS for how to
+     * obtain a real device's ID from Logcat).
+     */
+    fun initAll(@XmlRes defaultConfig: Int, adjustToken: String? = null, testDeviceIds: List<String>? = null) {
         initRemoteConfig(defaultConfig) { success ->
             isRemoteConfigReady = true
             val listeners = remoteConfigReadyListeners.toList()
             remoteConfigReadyListeners.clear()
             listeners.forEach { it() }
 
-            initAdmobAndAOA()
+            initAdmobAndAOA(testDeviceIds)
         }
         adjustToken?.let { initTracker(it) }
     }
@@ -80,20 +87,36 @@ open class AdLibHiltApplication : AdLibBaseApplication() {
         adjustAnalyticsHelper.initAdjust(token)
     }
 
-    fun initAdmobAndAOA() {
+    fun initAdmobAndAOA(testDeviceIds: List<String>? = null) {
         admobHelper.initAdmob({
             isAdMobReady = true
-            initAOA()
 
             val listeners = adMobReadyListeners.toList()
             adMobReadyListeners.clear()
             listeners.forEach { it() }
 
+            initAOA()
+
+            // Do NOT resolve a pending showAOA() request here yet: SDK init finishing only
+            // means MobileAds.initialize() completed, not that the App Open ad content itself
+            // has finished loading over the network. Wait for appOpenHelper.adLoaded to emit
+            // (success or failure) before actually attempting to show anything.
+            if (pendingShowAOA) {
+                waitForAOALoadThenResolvePending()
+            }
+        }, testDeviceIds)
+    }
+
+    private fun waitForAOALoadThenResolvePending() {
+        var observer: Observer<Boolean>? = null
+        observer = Observer<Boolean> {
+            observer?.let { appOpenHelper.adLoaded.removeObserver(it) }
             if (pendingShowAOA) {
                 pendingShowAOA = false
                 showAOA()
             }
-        })
+        }
+        appOpenHelper.adLoaded.observeForever(observer)
     }
 
     fun initAOA() {

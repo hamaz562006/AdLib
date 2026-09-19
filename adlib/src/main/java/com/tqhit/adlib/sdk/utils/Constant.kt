@@ -15,4 +15,18 @@ object Constant {
     const val ADMOB_REWARDED_AD_UNIT_ID = "/21775744923/example/rewarded"
     const val ADMOB_NATIVE_AD_UNIT_ID = "/21775744923/example/native"
     const val ADMOB_AOA_AD_UNIT_ID = "/21775744923/example/app-open"
+
+    /**
+     * Real (physical) test devices are NOT automatically treated as test devices by AdMob —
+     * only emulators are. To register a physical device, run the app once, find the line in
+     * Logcat that looks like:
+     *   "Use RequestConfiguration.Builder.setTestDeviceIds(Arrays.asList("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
+     *    to get test ads on this device."
+     * and add that hashed device ID string here. Without this, Ad Inspector will fail with
+     * NOT_IN_TEST_MODE on a real device, and some real (non-guaranteed) ad units may not
+     * reliably serve test creative to it either.
+     */
+    val TEST_DEVICE_IDS: List<String> = listOf(
+        // "PASTE_YOUR_DEVICE_HASHED_ID_FROM_LOGCAT_HERE"
+    )
 }

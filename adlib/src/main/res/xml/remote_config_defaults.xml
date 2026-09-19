@@ -41,6 +41,26 @@
         <value>/21775744923/example/app-open</value>
     </entry>
     <entry>
+        <key>bn_ad_unit_id</key>
+        <value>/21775744923/example/adaptive-banner</value>
+    </entry>
+    <entry>
+        <key>c_bn_ad_unit_id</key>
+        <value>/21775744923/example/adaptive-banner</value>
+    </entry>
+    <entry>
+        <key>iv_ad_unit_id</key>
+        <value>/21775744923/example/interstitial</value>
+    </entry>
+    <entry>
+        <key>rv_ad_unit_id</key>
+        <value>/21775744923/example/rewarded</value>
+    </entry>
+    <entry>
+        <key>nt_ad_unit_id</key>
+        <value>/21775744923/example/native</value>
+    </entry>
+    <entry>
         <key>house_ads_enabled</key>
         <value>true</value>
     </entry>

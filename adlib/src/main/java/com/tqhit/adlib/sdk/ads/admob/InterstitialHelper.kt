@@ -51,6 +51,16 @@ class InterstitialHelper @Inject constructor(
     private fun isHouseAutoFallback() =
         remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_AUTO_FALLBACK)
 
+    /**
+     * Resolves the effective ad unit ID: a matching Remote Config key takes priority (so a
+     * production ad unit ID can be swapped after publishing without a new release); falls back
+     * to the ID passed in code if the RC key is missing/blank.
+     */
+    private fun resolveAdUnitId(rcKey: String, fallback: String): String {
+        val rcValue = remoteConfigHelper.getString(rcKey)
+        return if (rcValue.isNotBlank()) rcValue else fallback
+    }
+
     private fun runOnUiThread(action: () -> Unit) {
         if (Looper.myLooper() == Looper.getMainLooper()) {
             action()
@@ -306,7 +316,7 @@ class InterstitialHelper @Inject constructor(
 
         analyticsTracker.logEvent("aj_inters_load")
 
-        val adUnitId = if (Constant.DEBUG_MODE) Constant.ADMOB_INTERSTITIAL_AD_UNIT_ID else interstitialAdUnitId
+        val adUnitId = resolveAdUnitId(Constant.RC_IV_AD_UNIT_ID, interstitialAdUnitId)
         if (!adMobRateLimiter.canRequest(adUnitId)) {
             Log.w(TAG, "Interstitial adUnitId $adUnitId is in NO_FILL cooldown")
             val noFillError = LoadAdError(

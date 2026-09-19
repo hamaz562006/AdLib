@@ -8,6 +8,17 @@ object Constant {
     const val RC_HOUSE_ADS_AUTO_FALLBACK = "house_ads_auto_fallback"
     const val RC_HOUSE_ADS_JSON = "house_ads_json"
 
+    // Remote Config keys for per-format ad unit ID overrides. Each format's Helper resolves
+    // its effective ad unit ID from the matching RC key first (if present and non-blank), and
+    // only falls back to the ID passed in code otherwise. This lets a production ad unit ID be
+    // swapped after publishing (e.g. after an account/policy change) without a new app release.
+    // Keep Firebase Remote Config's free-tier limits in mind if you add many more custom keys.
+    const val RC_BN_AD_UNIT_ID = "bn_ad_unit_id"
+    const val RC_C_BN_AD_UNIT_ID = "c_bn_ad_unit_id"
+    const val RC_IV_AD_UNIT_ID = "iv_ad_unit_id"
+    const val RC_RV_AD_UNIT_ID = "rv_ad_unit_id"
+    const val RC_NT_AD_UNIT_ID = "nt_ad_unit_id"
+
     // AdMob Next-Gen test ad unit IDs
     const val ADMOB_BANNER_AD_UNIT_ID = "/21775744923/example/adaptive-banner"
     const val ADMOB_COLLAPSIBLE_BANNER_AD_UNIT_ID = "/21775744923/example/adaptive-banner"

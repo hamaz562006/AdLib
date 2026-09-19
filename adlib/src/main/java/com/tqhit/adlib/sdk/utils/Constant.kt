@@ -38,6 +38,6 @@ object Constant {
      * reliably serve test creative to it either.
      */
     val TEST_DEVICE_IDS: List<String> = listOf(
-        // "PASTE_YOUR_DEVICE_HASHED_ID_FROM_LOGCAT_HERE"
+        "32ADBC34647C217D742EBC8556495F97"
     )
 }

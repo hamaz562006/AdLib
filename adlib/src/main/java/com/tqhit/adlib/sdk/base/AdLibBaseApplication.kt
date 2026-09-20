@@ -2,7 +2,6 @@ package com.tqhit.adlib.sdk.base
 
 import android.app.Activity
 import android.app.Application
-import android.content.Context
 import android.os.Bundle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
@@ -11,19 +10,11 @@ import androidx.lifecycle.OnLifecycleEvent
 import androidx.lifecycle.ProcessLifecycleOwner
 import cat.ereza.customactivityoncrash.config.CaocConfig
 import com.google.android.libraries.ads.mobile.sdk.common.AdActivity
-import com.google.firebase.FirebaseApp
 import com.tqhit.adlib.sdk.ui.crash.AdLibCustomCrashActivity
 import com.tqhit.adlib.sdk.utils.Constant
 
 abstract class AdLibBaseApplication : Application(), Application.ActivityLifecycleCallbacks, LifecycleObserver {
     protected var currentActivity: Activity? = null
-
-    override fun attachBaseContext(base: Context) {
-        super.attachBaseContext(base)
-        if (FirebaseApp.getApps(base).isEmpty()) {
-            FirebaseApp.initializeApp(base)
-        }
-    }
 
     open fun onCreateExt() {}
 

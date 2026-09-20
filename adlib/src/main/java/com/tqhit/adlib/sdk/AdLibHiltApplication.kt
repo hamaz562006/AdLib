@@ -22,13 +22,25 @@ import javax.inject.Inject
 open class AdLibHiltApplication : AdLibBaseApplication() {
     protected val APP_AOA_CONFIG_KEY = "APP_AOA"
 
-    @Inject lateinit var admobHelper: AdmobHelper
-    @Inject lateinit var appOpenHelper: AppOpenHelper
-    @Inject lateinit var houseAdHelper: HouseAdHelper
-    @Inject lateinit var analyticsTracker: AnalyticsTracker
+    @Inject lateinit var admobHelperLazy: dagger.Lazy<AdmobHelper>
+    private val admobHelper: AdmobHelper get() = admobHelperLazy.get()
+
+    @Inject lateinit var appOpenHelperLazy: dagger.Lazy<AppOpenHelper>
+    private val appOpenHelper: AppOpenHelper get() = appOpenHelperLazy.get()
+
+    @Inject lateinit var houseAdHelperLazy: dagger.Lazy<HouseAdHelper>
+    private val houseAdHelper: HouseAdHelper get() = houseAdHelperLazy.get()
+
+    @Inject lateinit var analyticsTrackerLazy: dagger.Lazy<AnalyticsTracker>
+    private val analyticsTracker: AnalyticsTracker get() = analyticsTrackerLazy.get()
+
     @Inject lateinit var adjustAnalyticsHelper: AdjustAnalyticsHelper
-    @Inject lateinit var remoteConfigHelper: FirebaseRemoteConfigHelper
-    @Inject lateinit var activityAdLoader: ActivityAdLoader
+
+    @Inject lateinit var remoteConfigHelperLazy: dagger.Lazy<FirebaseRemoteConfigHelper>
+    private val remoteConfigHelper: FirebaseRemoteConfigHelper get() = remoteConfigHelperLazy.get()
+
+    @Inject lateinit var activityAdLoaderLazy: dagger.Lazy<ActivityAdLoader>
+    private val activityAdLoader: ActivityAdLoader get() = activityAdLoaderLazy.get()
 
     private var isAdMobReady = false
     private var isRemoteConfigReady = false

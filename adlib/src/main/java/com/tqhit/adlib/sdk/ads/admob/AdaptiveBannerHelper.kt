@@ -31,6 +31,16 @@ class AdaptiveBannerHelper @Inject constructor(
     private val remoteConfigHelper: FirebaseRemoteConfigHelper,
     private val houseBannerHelper: HouseBannerHelper
 ) {
+    /**
+     * Resolves the effective ad unit ID: a matching Remote Config key takes priority (so a
+     * production ad unit ID can be swapped after publishing without a new release); falls back
+     * to the ID passed in code if the RC key is missing/blank.
+     */
+    private fun resolveAdUnitId(rcKey: String, fallback: String): String {
+        val rcValue = remoteConfigHelper.getString(rcKey)
+        return if (rcValue.isNotBlank()) rcValue else fallback
+    }
+
     fun getAdaptiveAdSize(activity: Activity): AdSize {
         val widthPixels = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val windowMetrics: WindowMetrics = activity.windowManager.currentWindowMetrics
@@ -66,7 +76,7 @@ class AdaptiveBannerHelper @Inject constructor(
 
         val adView = AdView(activity)
         val adSize = getAdaptiveAdSize(activity)
-        val effectiveAdUnitId = if (Constant.DEBUG_MODE) Constant.ADMOB_BANNER_AD_UNIT_ID else adUnitId
+        val effectiveAdUnitId = resolveAdUnitId(Constant.RC_BN_AD_UNIT_ID, adUnitId)
         val adRequest = BannerAdRequest.Builder(effectiveAdUnitId, adSize).build()
 
         adView.loadAd(adRequest, object : AdLoadCallback<BannerAd> {

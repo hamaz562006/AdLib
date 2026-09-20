@@ -49,6 +49,16 @@ class NativeHelper @Inject constructor(
         remoteConfigHelper.getBoolean("nt_enable")
                 && !preferencesHelper.getBoolean(Constant.IS_PREMIUM, false)
 
+    /**
+     * Resolves the effective ad unit ID: a matching Remote Config key takes priority (so a
+     * production ad unit ID can be swapped after publishing without a new release); falls back
+     * to the ID passed in code if the RC key is missing/blank.
+     */
+    private fun resolveAdUnitId(rcKey: String, fallback: String): String {
+        val rcValue = remoteConfigHelper.getString(rcKey)
+        return if (rcValue.isNotBlank()) rcValue else fallback
+    }
+
     private fun runOnUiThread(action: () -> Unit) {
         if (Looper.myLooper() == Looper.getMainLooper()) {
             action()
@@ -191,7 +201,7 @@ class NativeHelper @Inject constructor(
 
         analyticsTracker.logEvent("aj_native_load")
 
-        val adUnitId = if (Constant.DEBUG_MODE) Constant.ADMOB_NATIVE_AD_UNIT_ID else nativeAdUnitId
+        val adUnitId = resolveAdUnitId(Constant.RC_NT_AD_UNIT_ID, nativeAdUnitId)
         val nativeAdRequest = getNativeAdRequest(adUnitId)
 
         NativeAdLoader.load(nativeAdRequest, object : NativeAdLoaderCallback {

@@ -53,6 +53,16 @@ class RewardHelper @Inject constructor(
     private fun isHouseAutoFallback() =
         remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_AUTO_FALLBACK)
 
+    /**
+     * Resolves the effective ad unit ID: a matching Remote Config key takes priority (so a
+     * production ad unit ID can be swapped after publishing without a new release); falls back
+     * to the ID passed in code if the RC key is missing/blank.
+     */
+    private fun resolveAdUnitId(rcKey: String, fallback: String): String {
+        val rcValue = remoteConfigHelper.getString(rcKey)
+        return if (rcValue.isNotBlank()) rcValue else fallback
+    }
+
     private fun runOnUiThread(action: () -> Unit) {
         if (Looper.myLooper() == Looper.getMainLooper()) {
             action()
@@ -298,7 +308,7 @@ class RewardHelper @Inject constructor(
 
         analyticsTracker.logEvent("aj_reward_load")
 
-        val adUnitId = if (Constant.DEBUG_MODE) Constant.ADMOB_REWARDED_AD_UNIT_ID else rewardAdUnitId
+        val adUnitId = resolveAdUnitId(Constant.RC_RV_AD_UNIT_ID, rewardAdUnitId)
         if (!adMobRateLimiter.canRequest(adUnitId)) {
             Log.w(TAG, "Rewarded adUnitId $adUnitId is in NO_FILL cooldown")
             val noFillError = LoadAdError(

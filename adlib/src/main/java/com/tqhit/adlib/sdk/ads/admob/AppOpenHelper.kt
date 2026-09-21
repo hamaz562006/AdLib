@@ -81,8 +81,17 @@ class AppOpenHelper @Inject constructor(
             return
         }
 
-        if (!isAdEnabled()) return
-        if (!admobConsentHelper.canRequestAds()) return
+        if (!isAdEnabled()) {
+            adLoaded.postValue(false)
+            return
+        }
+
+        if (!admobConsentHelper.canRequestAds()) {
+            android.util.Log.d("AppOpenHelper", "AOA load skipped: consent not ready yet")
+            adLoaded.postValue(false)
+            return
+        }
+
         if (isLoadingAd || isAdAvailable()) return
 
         val targetAdUnitId = if (Constant.DEBUG_MODE) Constant.ADMOB_AOA_AD_UNIT_ID else adUnitId

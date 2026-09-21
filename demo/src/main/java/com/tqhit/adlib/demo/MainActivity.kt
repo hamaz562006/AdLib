@@ -650,7 +650,12 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
                 if (error != null) {
                     logMessage("Consent Gathering Error: ${error.message}", "WARN")
                 } else {
-                    logMessage("Consent Gathering Complete. Can request ads: ${admobConsentHelper.canRequestAds()}", "SUCCESS")
+                    val canRequest = admobConsentHelper.canRequestAds()
+                    logMessage("Consent Gathering Complete. Can request ads: $canRequest", "SUCCESS")
+                    if (canRequest) {
+                        val app = application as DemoApplication
+                        app.initAOA()
+                    }
                 }
             }
         })

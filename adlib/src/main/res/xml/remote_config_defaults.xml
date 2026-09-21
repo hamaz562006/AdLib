@@ -68,4 +68,8 @@
         <key>house_ads_auto_fallback</key>
         <value>true</value>
     </entry>
+    <entry>
+        <key>APP_AOA</key>
+        <value>{"useHouseAd":false,"customId":null,"autoFallback":true}</value>
+    </entry>
 </defaultsMap>

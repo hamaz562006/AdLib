@@ -341,9 +341,11 @@ class AdmobHelper @Inject constructor(
             override fun onShowAdComplete() {
                 adCallback?.onShowAdComplete()
             }
-
             override fun onHouseAdShown(reason: String) {
                 adCallback?.onHouseAdShown(reason)
+            }
+            override fun onDiagnosticInfo(message: String) {
+                adCallback?.onDiagnosticInfo(message)
             }
         })
     }

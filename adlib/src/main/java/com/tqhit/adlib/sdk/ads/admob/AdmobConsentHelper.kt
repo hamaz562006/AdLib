@@ -8,6 +8,7 @@ import com.google.android.ump.ConsentInformation
 import com.google.android.ump.ConsentRequestParameters
 import com.google.android.ump.UserMessagingPlatform
 import com.tqhit.adlib.sdk.ads.callback.common.IAdmobConsentCallback
+import com.tqhit.adlib.sdk.utils.Constant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,6 +20,10 @@ class AdmobConsentHelper @Inject constructor(
     private var consentInformation: ConsentInformation = UserMessagingPlatform.getConsentInformation(context)
 
     fun canRequestAds(): Boolean {
+        // In debug / test mode with test ad units or registered test devices, do not block test ad verification
+        if (Constant.DEBUG_MODE || Constant.TEST_DEVICE_IDS.isNotEmpty()) {
+            return true
+        }
         return consentInformation.canRequestAds()
     }
 
@@ -50,11 +55,19 @@ class AdmobConsentHelper @Inject constructor(
         consentCallback: IAdmobConsentCallback,
         testDeviceId: String = ""
     ) {
-        val debugSettings =
-            ConsentDebugSettings.Builder(activity)
-                .setDebugGeography(ConsentDebugSettings.DebugGeography.DEBUG_GEOGRAPHY_EEA)
-                .addTestDeviceHashedId(testDeviceId)
-                .build()
+        val debugSettingsBuilder = ConsentDebugSettings.Builder(activity)
+            .setDebugGeography(ConsentDebugSettings.DebugGeography.DEBUG_GEOGRAPHY_EEA)
+
+        Constant.TEST_DEVICE_IDS.forEach { id ->
+            if (id.isNotBlank()) {
+                debugSettingsBuilder.addTestDeviceHashedId(id)
+            }
+        }
+        if (testDeviceId.isNotBlank()) {
+            debugSettingsBuilder.addTestDeviceHashedId(testDeviceId)
+        }
+
+        val debugSettings = debugSettingsBuilder.build()
 
         val params = ConsentRequestParameters.Builder().setConsentDebugSettings(debugSettings).build()
 

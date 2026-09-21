@@ -19,6 +19,7 @@ import com.tqhit.adlib.sdk.ads.loader.ActivityAdLoader
 import com.tqhit.adlib.sdk.analytics.AnalyticsTracker
 import com.tqhit.adlib.sdk.base.AdLibBaseApplication
 import com.tqhit.adlib.sdk.firebase.FirebaseRemoteConfigHelper
+import com.tqhit.adlib.sdk.utils.Constant
 import javax.inject.Inject
 
 // TODO: Coarse Location Collection: Google announced that GMA Next-Gen SDK will collect coarse location by default unless disabled via a configuration flag. In version 1.4.0 (installed), this configuration flag is not yet present in the public API (RequestConfiguration / InitializationConfig / MobileAds). Re-check in subsequent SDK updates and configure accordingly.
@@ -155,7 +156,8 @@ open class AdLibHiltApplication : AdLibBaseApplication() {
             val adUnitId = if (!customId.isNullOrBlank()) {
                 customId
             } else {
-                remoteConfigHelper.getString(ActivityAdLoader.RC_AOA_AD_UNIT_ID)
+                val rcId = remoteConfigHelper.getString(ActivityAdLoader.RC_AOA_AD_UNIT_ID)
+                if (rcId.isNotBlank()) rcId else Constant.ADMOB_AOA_AD_UNIT_ID
             }
             admobHelper.setAppOpenAdUnitId(adUnitId)
             admobHelper.loadAOA(applicationContext)

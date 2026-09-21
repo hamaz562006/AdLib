@@ -17,6 +17,7 @@ import com.tqhit.adlib.sdk.ads.house.HouseAppOpenHelper
 import com.tqhit.adlib.sdk.analytics.AnalyticsTracker
 import com.tqhit.adlib.sdk.data.local.PreferencesHelper
 import com.tqhit.adlib.sdk.firebase.FirebaseRemoteConfigHelper
+import com.tqhit.adlib.sdk.ui.dialog.LoadingAdsDialog
 import com.tqhit.adlib.sdk.utils.Constant
 import com.tqhit.adlib.sdk.utils.NetworkUtils
 import kotlinx.coroutines.CoroutineScope
@@ -39,9 +40,11 @@ class AppOpenHelper @Inject constructor(
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    private fun isAdEnabled() =
-        remoteConfigHelper.getBoolean("aoa_enable")
-                && !preferencesHelper.getBoolean(Constant.IS_PREMIUM, false)
+    private fun isAdEnabled(): Boolean {
+        if (preferencesHelper.getBoolean(Constant.IS_PREMIUM, false)) return false
+        if (Constant.DEBUG_MODE) return true
+        return remoteConfigHelper.getBoolean("aoa_enable")
+    }
 
     private fun isHouseAdsEnabled() =
         remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)
@@ -75,30 +78,38 @@ class AppOpenHelper @Inject constructor(
         this.adUnitId = adUnitId
     }
 
-    fun loadAd(context: Context) {
+    fun loadAd(context: Context, onComplete: ((Boolean, String?) -> Unit)? = null) {
         if (!NetworkUtils.isNetworkAvailable(context)) {
             adLoaded.postValue(false)
+            onComplete?.invoke(false, "Network unavailable")
             return
         }
 
         if (!isAdEnabled()) {
             adLoaded.postValue(false)
+            onComplete?.invoke(false, "App Open disabled")
             return
         }
 
         if (!admobConsentHelper.canRequestAds()) {
             android.util.Log.d("AppOpenHelper", "AOA load skipped: consent not ready yet")
             adLoaded.postValue(false)
+            onComplete?.invoke(false, "Consent not ready")
             return
         }
 
-        if (isLoadingAd || isAdAvailable()) return
+        if (isAdAvailable()) {
+            adLoaded.postValue(true)
+            onComplete?.invoke(true, null)
+            return
+        }
 
-        val targetAdUnitId = if (Constant.DEBUG_MODE) Constant.ADMOB_AOA_AD_UNIT_ID else adUnitId
+        val targetAdUnitId = if (Constant.DEBUG_MODE || adUnitId.isBlank()) Constant.ADMOB_AOA_AD_UNIT_ID else adUnitId
         if (!adMobRateLimiter.canRequest(targetAdUnitId)) {
             android.util.Log.w("AppOpenHelper", "AppOpen adUnitId $targetAdUnitId is in NO_FILL cooldown")
             adLoaded.postValue(false)
             analyticsTracker.logEvent("aj_app_open_load_fail_cooldown")
+            onComplete?.invoke(false, "In NO_FILL cooldown")
             return
         }
 
@@ -115,6 +126,7 @@ class AppOpenHelper @Inject constructor(
                     loadTime = Date().time
                     adLoaded.postValue(true)
                     android.util.Log.d("ADLIB_DIAGNOSTIC", "AOA load SUCCESS, adUnitId=$targetAdUnitId")
+                    onComplete?.invoke(true, null)
                 }
 
                 override fun onAdFailedToLoad(loadAdError: LoadAdError) {
@@ -124,7 +136,9 @@ class AppOpenHelper @Inject constructor(
                     analyticsTracker.logEvent("aj_app_open_load_fail")
                     isLoadingAd = false
                     adLoaded.postValue(false)
-                    android.util.Log.d("ADLIB_DIAGNOSTIC", "AOA load FAILED, adUnitId=$targetAdUnitId, error=${loadAdError.message ?: loadAdError.code}")
+                    val errorMsg = loadAdError.message.ifBlank { loadAdError.code.toString() }
+                    android.util.Log.d("ADLIB_DIAGNOSTIC", "AOA load FAILED, adUnitId=$targetAdUnitId, error=$errorMsg")
+                    onComplete?.invoke(false, errorMsg)
                 }
             }
         )
@@ -185,24 +199,37 @@ class AppOpenHelper @Inject constructor(
         if (activity.isFinishing || activity.isDestroyed) return
 
         if (!isAdAvailable()) {
-            if (isHouseAutoFallback()) {
-                runOnUiThread {
-                    adCallback.onDiagnosticInfo("isAdAvailable=false, appOpenAd=${appOpenAd != null}, isLoadingAd=$isLoadingAd")
-                    adCallback.onHouseAdShown("No AdMob ad available")
-                    houseAppOpenHelper.showHouseAppOpen(
-                        activity,
-                        object : HouseAppOpenHelper.OnShowAdCompleteListener {
-                            override fun onShowAdComplete() {
-                                adCallback.onShowAdComplete()
-                            }
-                        },
-                        ignoreFrequencyCheck = true
-                    )
-                }
-            } else {
-                runOnUiThread { adCallback.onShowAdComplete() }
+            val loadingAdsDialog = LoadingAdsDialog(activity)
+            if (!activity.isFinishing && !activity.isDestroyed) {
+                loadingAdsDialog.show()
             }
-            loadAd(activity)
+            loadAd(activity) { success, errorMsg ->
+                runOnUiThread {
+                    if (loadingAdsDialog.isShowing) {
+                        loadingAdsDialog.dismiss()
+                    }
+                    if (success && isAdAvailable() && !activity.isFinishing && !activity.isDestroyed) {
+                        checkAndShowAppOpenAd(activity, adCallback)
+                    } else {
+                        if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
+                            val reason = errorMsg ?: "No AdMob ad available"
+                            adCallback.onDiagnosticInfo("AOA load failed, falling back to House: $reason")
+                            adCallback.onHouseAdShown(reason)
+                            houseAppOpenHelper.showHouseAppOpen(
+                                activity,
+                                object : HouseAppOpenHelper.OnShowAdCompleteListener {
+                                    override fun onShowAdComplete() {
+                                        adCallback.onShowAdComplete()
+                                    }
+                                },
+                                ignoreFrequencyCheck = true
+                            )
+                        } else {
+                            adCallback.onShowAdComplete()
+                        }
+                    }
+                }
+            }
             return
         }
 

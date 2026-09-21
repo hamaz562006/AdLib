@@ -1,7 +1,7 @@
 package com.tqhit.adlib.sdk.utils
 
 object Constant {
-    var DEBUG_MODE = false
+    var DEBUG_MODE = true
 
     const val IS_PREMIUM = "is_premium"
     const val RC_HOUSE_ADS_ENABLED = "house_ads_enabled"

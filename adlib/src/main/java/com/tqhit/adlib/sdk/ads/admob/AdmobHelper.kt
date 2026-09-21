@@ -18,6 +18,7 @@ import com.tqhit.adlib.sdk.ads.callback.admob.BannerAdCallback
 import com.tqhit.adlib.sdk.ads.callback.admob.InterstitialAdCallback
 import com.tqhit.adlib.sdk.ads.callback.admob.NativeAdCallback
 import com.tqhit.adlib.sdk.ads.callback.admob.RewardAdCallback
+import com.tqhit.adlib.sdk.utils.Constant
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -64,16 +65,25 @@ class AdmobHelper @Inject constructor(
                 "ca-app-pub-3940256099942544~3347511713"
             }
 
+            val effectiveTestDevices = if (!testDeviceIds.isNullOrEmpty()) {
+                testDeviceIds
+            } else {
+                Constant.TEST_DEVICE_IDS
+            }
+
             val requestConfig = RequestConfiguration.Builder()
-                .setTestDeviceIds(testDeviceIds ?: listOf())
+                .setTestDeviceIds(effectiveTestDevices)
                 .build()
+
+            MobileAds.setRequestConfiguration(requestConfig)
 
             val initConfig = InitializationConfig.Builder(appId)
                 .setRequestConfiguration(requestConfig)
                 .build()
 
             MobileAds.initialize(context, initConfig) { _ ->
-                Log.d(TAG, "Admob initialized")
+                MobileAds.setRequestConfiguration(requestConfig)
+                Log.d(TAG, "Admob initialized with test devices: $effectiveTestDevices")
                 onComplete()
             }
         }
@@ -351,6 +361,10 @@ class AdmobHelper @Inject constructor(
     }
 
     fun launchAdInspector(context: Context, onComplete: ((error: AdInspectorError?) -> Unit)? = null) {
+        val requestConfig = RequestConfiguration.Builder()
+            .setTestDeviceIds(Constant.TEST_DEVICE_IDS)
+            .build()
+        MobileAds.setRequestConfiguration(requestConfig)
         MobileAds.openAdInspector { error ->
             onComplete?.invoke(error)
         }

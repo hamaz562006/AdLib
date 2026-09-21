@@ -36,9 +36,11 @@ class BannerHelper @Inject constructor(
     private val preferencesHelper: PreferencesHelper,
     private val houseBannerHelper: HouseBannerHelper
 ) {
-    private fun isAdEnabled() =
-        remoteConfigHelper.getBoolean("bn_enable")
-                && !preferencesHelper.getBoolean(Constant.IS_PREMIUM, false)
+    private fun isAdEnabled(): Boolean {
+        if (preferencesHelper.getBoolean(Constant.IS_PREMIUM, false)) return false
+        if (Constant.DEBUG_MODE) return true
+        return remoteConfigHelper.getBoolean("bn_enable")
+    }
 
     /**
      * Resolves the effective ad unit ID: a matching Remote Config key takes priority (so a
@@ -46,6 +48,9 @@ class BannerHelper @Inject constructor(
      * to the ID passed in code if the RC key is missing/blank.
      */
     private fun resolveAdUnitId(rcKey: String, fallback: String): String {
+        if (Constant.DEBUG_MODE) {
+            return fallback
+        }
         val rcValue = remoteConfigHelper.getString(rcKey)
         return if (rcValue.isNotBlank()) rcValue else fallback
     }
@@ -134,21 +139,7 @@ class BannerHelper @Inject constructor(
             return
         }
 
-        if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)) {
-            CoroutineScope(Dispatchers.Main).launch {
-                val reachable = NetworkUtils.isAdServerReachable()
-                if (!reachable && !activity.isFinishing && !activity.isDestroyed) {
-                    activity.runOnUiThread {
-                        adCallback?.onHouseAdShown("Ad server unreachable (possibly blocked network)")
-                        houseBannerHelper.loadHouseBanner(activity, parent, createBridgedBannerCallback(activity, adCallback))
-                    }
-                } else if (!activity.isFinishing && !activity.isDestroyed) {
-                    executeLoadBannerWithFallback(activity, bannerAdUnitId, parent, timeoutMilliSecond, adCallback)
-                }
-            }
-        } else {
-            executeLoadBannerWithFallback(activity, bannerAdUnitId, parent, timeoutMilliSecond, adCallback)
-        }
+        executeLoadBannerWithFallback(activity, bannerAdUnitId, parent, timeoutMilliSecond, adCallback)
     }
 
     private fun executeLoadBannerWithFallback(
@@ -240,21 +231,7 @@ class BannerHelper @Inject constructor(
             return
         }
 
-        if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)) {
-            CoroutineScope(Dispatchers.Main).launch {
-                val reachable = NetworkUtils.isAdServerReachable()
-                if (!reachable && !activity.isFinishing && !activity.isDestroyed) {
-                    activity.runOnUiThread {
-                        adCallback?.onHouseAdShown("Ad server unreachable (possibly blocked network)")
-                        houseBannerHelper.loadHouseBanner(activity, parent, createBridgedBannerCallback(activity, adCallback))
-                    }
-                } else if (!activity.isFinishing && !activity.isDestroyed) {
-                    executeLoadCollapsibleBannerWithFallback(activity, bannerAdUnitId, parent, timeoutMilliSecond, adCallback)
-                }
-            }
-        } else {
-            executeLoadCollapsibleBannerWithFallback(activity, bannerAdUnitId, parent, timeoutMilliSecond, adCallback)
-        }
+        executeLoadCollapsibleBannerWithFallback(activity, bannerAdUnitId, parent, timeoutMilliSecond, adCallback)
     }
 
     private fun executeLoadCollapsibleBannerWithFallback(
@@ -323,7 +300,6 @@ class BannerHelper @Inject constructor(
         adCallback?.onDiagnosticInfo("Computed AdSize: width=${adSize.width}, height=${adSize.height}")
         val adRequest = getAdRequest(effectiveAdUnitId, adSize)
 
-        adView.setLayerType(View.LAYER_TYPE_SOFTWARE, null)
         adView.loadAd(adRequest, object : AdLoadCallback<BannerAd> {
             override fun onAdLoaded(bannerAd: BannerAd) {
                 bannerAd.adEventCallback = object : BannerAdEventCallback {
@@ -402,7 +378,6 @@ class BannerHelper @Inject constructor(
         adCallback?.onDiagnosticInfo("Computed AdSize: width=${adSize.width}, height=${adSize.height}")
         val adRequest = getCollapsibleAdRequest(effectiveAdUnitId, adSize)
 
-        adView.setLayerType(View.LAYER_TYPE_SOFTWARE, null)
         adView.loadAd(adRequest, object : AdLoadCallback<BannerAd> {
             override fun onAdLoaded(bannerAd: BannerAd) {
                 bannerAd.adEventCallback = object : BannerAdEventCallback {

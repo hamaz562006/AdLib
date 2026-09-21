@@ -37,6 +37,9 @@ class AdaptiveBannerHelper @Inject constructor(
      * to the ID passed in code if the RC key is missing/blank.
      */
     private fun resolveAdUnitId(rcKey: String, fallback: String): String {
+        if (Constant.DEBUG_MODE) {
+            return fallback
+        }
         val rcValue = remoteConfigHelper.getString(rcKey)
         return if (rcValue.isNotBlank()) rcValue else fallback
     }
@@ -69,7 +72,7 @@ class AdaptiveBannerHelper @Inject constructor(
             return null
         }
 
-        if (remoteConfigHelper.getBoolean("bn_enable").not()) {
+        if (!Constant.DEBUG_MODE && remoteConfigHelper.getBoolean("bn_enable").not()) {
             activity.runOnUiThread { callback?.onAdFailedToLoad(null) }
             return null
         }
@@ -136,21 +139,7 @@ class AdaptiveBannerHelper @Inject constructor(
             return
         }
 
-        if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)) {
-            CoroutineScope(Dispatchers.Main).launch {
-                val reachable = NetworkUtils.isAdServerReachable()
-                if (!reachable && !activity.isFinishing && !activity.isDestroyed) {
-                    activity.runOnUiThread {
-                        callback?.onHouseAdShown("Ad server unreachable (possibly blocked network)")
-                        houseBannerHelper.loadHouseBanner(activity, container, createBridgedCallback(activity, callback))
-                    }
-                } else if (!activity.isFinishing && !activity.isDestroyed) {
-                    executeLoadAdaptiveBannerWithFallback(activity, adUnitId, container, callback)
-                }
-            }
-        } else {
-            executeLoadAdaptiveBannerWithFallback(activity, adUnitId, container, callback)
-        }
+        executeLoadAdaptiveBannerWithFallback(activity, adUnitId, container, callback)
     }
 
     private fun executeLoadAdaptiveBannerWithFallback(

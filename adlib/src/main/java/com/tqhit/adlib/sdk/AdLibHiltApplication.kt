@@ -2,6 +2,8 @@ package com.tqhit.adlib.sdk
 
 import android.app.Activity
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.annotation.XmlRes
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
@@ -21,6 +23,8 @@ import javax.inject.Inject
 // TODO: Coarse Location Collection: Google announced that GMA Next-Gen SDK will collect coarse location by default unless disabled via a configuration flag. In version 1.4.0 (installed), this configuration flag is not yet present in the public API (RequestConfiguration / InitializationConfig / MobileAds). Re-check in subsequent SDK updates and configure accordingly.
 open class AdLibHiltApplication : AdLibBaseApplication() {
     protected val APP_AOA_CONFIG_KEY = "APP_AOA"
+
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     @Inject lateinit var admobHelperLazy: dagger.Lazy<AdmobHelper>
     private val admobHelper: AdmobHelper get() = admobHelperLazy.get()
@@ -80,12 +84,14 @@ open class AdLibHiltApplication : AdLibBaseApplication() {
      */
     fun initAll(@XmlRes defaultConfig: Int, adjustToken: String? = null, testDeviceIds: List<String>? = null) {
         initRemoteConfig(defaultConfig) { success ->
-            isRemoteConfigReady = true
-            val listeners = remoteConfigReadyListeners.toList()
-            remoteConfigReadyListeners.clear()
-            listeners.forEach { it() }
+            mainHandler.post {
+                isRemoteConfigReady = true
+                val listeners = remoteConfigReadyListeners.toList()
+                remoteConfigReadyListeners.clear()
+                listeners.forEach { it() }
 
-            initAdmobAndAOA(testDeviceIds)
+                initAdmobAndAOA(testDeviceIds)
+            }
         }
         adjustToken?.let { initTracker(it) }
     }
@@ -101,34 +107,38 @@ open class AdLibHiltApplication : AdLibBaseApplication() {
 
     fun initAdmobAndAOA(testDeviceIds: List<String>? = null) {
         admobHelper.initAdmob({
-            isAdMobReady = true
+            mainHandler.post {
+                isAdMobReady = true
 
-            val listeners = adMobReadyListeners.toList()
-            adMobReadyListeners.clear()
-            listeners.forEach { it() }
+                val listeners = adMobReadyListeners.toList()
+                adMobReadyListeners.clear()
+                listeners.forEach { it() }
 
-            initAOA()
+                initAOA()
 
-            // Do NOT resolve a pending showAOA() request here yet: SDK init finishing only
-            // means MobileAds.initialize() completed, not that the App Open ad content itself
-            // has finished loading over the network. Wait for appOpenHelper.adLoaded to emit
-            // (success or failure) before actually attempting to show anything.
-            if (pendingShowAOA) {
-                waitForAOALoadThenResolvePending()
+                // Do NOT resolve a pending showAOA() request here yet: SDK init finishing only
+                // means MobileAds.initialize() completed, not that the App Open ad content itself
+                // has finished loading over the network. Wait for appOpenHelper.adLoaded to emit
+                // (success or failure) before actually attempting to show anything.
+                if (pendingShowAOA) {
+                    waitForAOALoadThenResolvePending()
+                }
             }
         }, testDeviceIds)
     }
 
     private fun waitForAOALoadThenResolvePending() {
-        var observer: Observer<Boolean>? = null
-        observer = Observer<Boolean> {
-            observer?.let { appOpenHelper.adLoaded.removeObserver(it) }
-            if (pendingShowAOA) {
-                pendingShowAOA = false
-                showAOA()
+        mainHandler.post {
+            var observer: Observer<Boolean>? = null
+            observer = Observer<Boolean> {
+                observer?.let { appOpenHelper.adLoaded.removeObserver(it) }
+                if (pendingShowAOA) {
+                    pendingShowAOA = false
+                    showAOA()
+                }
             }
+            appOpenHelper.adLoaded.observeForever(observer)
         }
-        appOpenHelper.adLoaded.observeForever(observer)
     }
 
     fun initAOA() {
@@ -148,6 +158,11 @@ open class AdLibHiltApplication : AdLibBaseApplication() {
     }
 
     override fun showAOA() {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            mainHandler.post { showAOA() }
+            return
+        }
+
         if (!isAdMobReady) {
             pendingShowAOA = true
             return

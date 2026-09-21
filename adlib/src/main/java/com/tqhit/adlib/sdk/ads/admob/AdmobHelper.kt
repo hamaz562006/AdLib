@@ -75,14 +75,16 @@ class AdmobHelper @Inject constructor(
                 .setTestDeviceIds(effectiveTestDevices)
                 .build()
 
-            MobileAds.setRequestConfiguration(requestConfig)
-
             val initConfig = InitializationConfig.Builder(appId)
                 .setRequestConfiguration(requestConfig)
                 .build()
 
             MobileAds.initialize(context, initConfig) { _ ->
-                MobileAds.setRequestConfiguration(requestConfig)
+                try {
+                    MobileAds.setRequestConfiguration(requestConfig)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to set RequestConfiguration post-init", e)
+                }
                 Log.d(TAG, "Admob initialized with test devices: $effectiveTestDevices")
                 onComplete()
             }

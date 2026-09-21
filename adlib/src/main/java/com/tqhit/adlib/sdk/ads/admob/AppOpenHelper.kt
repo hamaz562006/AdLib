@@ -68,6 +68,7 @@ class AppOpenHelper @Inject constructor(
     interface OnShowAdCompleteListener {
         fun onShowAdComplete()
         fun onHouseAdShown(reason: String) {}
+        fun onDiagnosticInfo(message: String) {}
     }
 
     fun setAdUnitId(adUnitId: String) {
@@ -104,6 +105,7 @@ class AppOpenHelper @Inject constructor(
                     isLoadingAd = false
                     loadTime = Date().time
                     adLoaded.postValue(true)
+                    android.util.Log.d("ADLIB_DIAGNOSTIC", "AOA load SUCCESS, adUnitId=$targetAdUnitId")
                 }
 
                 override fun onAdFailedToLoad(loadAdError: LoadAdError) {
@@ -113,6 +115,7 @@ class AppOpenHelper @Inject constructor(
                     analyticsTracker.logEvent("aj_app_open_load_fail")
                     isLoadingAd = false
                     adLoaded.postValue(false)
+                    android.util.Log.d("ADLIB_DIAGNOSTIC", "AOA load FAILED, adUnitId=$targetAdUnitId, error=${loadAdError.message ?: loadAdError.code}")
                 }
             }
         )
@@ -175,6 +178,7 @@ class AppOpenHelper @Inject constructor(
         if (!isAdAvailable()) {
             if (isHouseAutoFallback()) {
                 runOnUiThread {
+                    adCallback.onDiagnosticInfo("isAdAvailable=false, appOpenAd=${appOpenAd != null}, isLoadingAd=$isLoadingAd")
                     adCallback.onHouseAdShown("No AdMob ad available")
                     houseAppOpenHelper.showHouseAppOpen(
                         activity,

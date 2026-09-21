@@ -43,6 +43,7 @@ import com.tqhit.adlib.sdk.data.local.PreferencesHelper
 import com.tqhit.adlib.sdk.firebase.FirebaseRemoteConfigHelper
 import com.tqhit.adlib.sdk.ui.SdkWarmupOverlay
 import com.tqhit.adlib.sdk.utils.Constant
+import com.tqhit.adlib.sdk.AdLibHiltApplication
 import dagger.hilt.android.AndroidEntryPoint
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -96,6 +97,12 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
         updateNetworkStatus()
         refreshRemoteConfigDisplay()
         refreshFrequencyStatus()
+
+        AdLibHiltApplication.diagnosticLog.observe(this) { message ->
+            if (!message.isNullOrBlank()) {
+                logMessage(message, "DIAGNOSTIC")
+            }
+        }
 
         val app = application as DemoApplication
         app.addReadyListener(
@@ -458,6 +465,10 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
                         logMessage("App Open Ad display completed", "INFO")
                         refreshFrequencyStatus()
                     }
+
+                    override fun onDiagnosticInfo(message: String) {
+                        logMessage(message, "DIAGNOSTIC")
+                    }
                 }
             )
         }
@@ -469,6 +480,7 @@ class MainActivity : AdLibBaseActivity<ActivityMainBinding>() {
 
         // Ad Inspector
         binding.btnAdInspector.setOnClickListener {
+            logMessage("AdMob ready state when Inspector pressed: ${(application as DemoApplication).isAdMobInitReady()}", "DIAGNOSTIC")
             logMessage("Opening Ad Inspector...", "INSPECTOR")
             admobHelper.launchAdInspector(this) { error ->
                 if (error != null) {

@@ -8,6 +8,7 @@ import androidx.annotation.XmlRes
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import com.tqhit.adlib.sdk.adjust.AdjustAnalyticsHelper
 import com.tqhit.adlib.sdk.ads.admob.AdmobHelper
@@ -22,6 +23,10 @@ import javax.inject.Inject
 
 // TODO: Coarse Location Collection: Google announced that GMA Next-Gen SDK will collect coarse location by default unless disabled via a configuration flag. In version 1.4.0 (installed), this configuration flag is not yet present in the public API (RequestConfiguration / InitializationConfig / MobileAds). Re-check in subsequent SDK updates and configure accordingly.
 open class AdLibHiltApplication : AdLibBaseApplication() {
+    companion object {
+        val diagnosticLog = MutableLiveData<String>()
+    }
+
     protected val APP_AOA_CONFIG_KEY = "APP_AOA"
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -186,7 +191,17 @@ open class AdLibHiltApplication : AdLibBaseApplication() {
             admobHelper.showAOA(
                 currentActivity!!,
                 object : AppOpenHelper.OnShowAdCompleteListener {
-                    override fun onShowAdComplete() {}
+                    override fun onShowAdComplete() {
+                        diagnosticLog.postValue("showAOA: onShowAdComplete")
+                    }
+
+                    override fun onHouseAdShown(reason: String) {
+                        diagnosticLog.postValue("showAOA: onHouseAdShown, reason=$reason")
+                    }
+
+                    override fun onDiagnosticInfo(message: String) {
+                        diagnosticLog.postValue("showAOA: $message")
+                    }
                 }
             )
         }

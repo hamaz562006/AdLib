@@ -1,8 +1,12 @@
 package com.tqhit.adlib.sdk.base
 
 import android.app.Activity
+import android.app.ActivityManager
 import android.app.Application
+import android.content.Context
+import android.os.Build
 import android.os.Bundle
+import android.os.Process
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -20,6 +24,17 @@ abstract class AdLibBaseApplication : Application(), Application.ActivityLifecyc
 
     open fun isDebugMode(): Boolean {
         return Constant.DEBUG_MODE
+    }
+
+    protected fun isMainProcess(): Boolean {
+        val currentProcessName = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            getProcessName()
+        } else {
+            val pid = Process.myPid()
+            val manager = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+            manager?.runningAppProcesses?.firstOrNull { it.pid == pid }?.processName
+        }
+        return currentProcessName == packageName
     }
 
     open fun setupCAOC() {
@@ -40,12 +55,12 @@ abstract class AdLibBaseApplication : Application(), Application.ActivityLifecyc
 
     override fun onCreate() {
         super.onCreate()
-        registerActivityLifecycleCallbacks(this)
-        onCreateExt()
-        if (isDebugMode()) {
-            setupCAOC()
+        setupCAOC()
+        if (isMainProcess()) {
+            registerActivityLifecycleCallbacks(this)
+            onCreateExt()
+            ProcessLifecycleOwner.get().lifecycle.addObserver(this)
         }
-        ProcessLifecycleOwner.get().lifecycle.addObserver(this)
     }
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {

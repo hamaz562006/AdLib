@@ -20,8 +20,10 @@ object Constant {
     const val RC_NT_AD_UNIT_ID = "nt_ad_unit_id"
 
     // AdMob Next-Gen test ad unit IDs
-    const val ADMOB_BANNER_AD_UNIT_ID = "/21775744923/example/adaptive-banner"
-    const val ADMOB_COLLAPSIBLE_BANNER_AD_UNIT_ID = "/21775744923/example/adaptive-banner"
+    //const val ADMOB_BANNER_AD_UNIT_ID = "/21775744923/example/adaptive-banner"
+    //const val ADMOB_COLLAPSIBLE_BANNER_AD_UNIT_ID = "/21775744923/example/adaptive-banner"
+    const val ADMOB_BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/9214589741"
+    const val ADMOB_COLLAPSIBLE_BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/9214589741"
     const val ADMOB_INTERSTITIAL_AD_UNIT_ID = "/21775744923/example/interstitial"
     const val ADMOB_REWARDED_AD_UNIT_ID = "/21775744923/example/rewarded"
     const val ADMOB_NATIVE_AD_UNIT_ID = "/21775744923/example/native"

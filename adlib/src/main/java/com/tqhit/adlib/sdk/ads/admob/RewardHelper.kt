@@ -27,6 +27,7 @@ import com.tqhit.adlib.sdk.utils.NetworkUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -165,6 +166,27 @@ class RewardHelper @Inject constructor(
         }
 
         if (rewardedAd == null) {
+            val adUnitId = resolveAdUnitId(Constant.RC_RV_AD_UNIT_ID, rewardAdUnitId)
+            if (!adMobRateLimiter.canRequest(adUnitId)) {
+                Log.w(TAG, "Rewarded adUnitId $adUnitId is in NO_FILL cooldown")
+                if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
+                    runOnUiThread {
+                        adCallback?.onHouseAdShown("In NO_FILL cooldown")
+                        houseRewardHelper.showHouseReward(
+                            activity,
+                            createBridgedHouseCallback(adCallback),
+                            ignoreFrequencyCheck = true
+                        )
+                    }
+                } else {
+                    runOnUiThread {
+                        val noFillError = LoadAdError(LoadAdError.ErrorCode.NO_FILL, "In NO_FILL cooldown", null)
+                        adCallback?.onAdFailedToLoad(noFillError)
+                    }
+                }
+                return
+            }
+
             val loadingAdsDialog = LoadingAdsDialog(activity)
             if (!activity.isFinishing && !activity.isDestroyed) {
                 loadingAdsDialog.show()
@@ -323,9 +345,27 @@ class RewardHelper @Inject constructor(
             return
         }
 
+        val isCompleted = AtomicBoolean(false)
+        val timeoutRunnable = if (timeOutMilliSecond != null && timeOutMilliSecond > 0) {
+            Runnable {
+                if (isCompleted.compareAndSet(false, true)) {
+                    val timeoutError = LoadAdError(LoadAdError.ErrorCode.NETWORK_ERROR, "Rewarded ad load timeout", null)
+                    runOnUiThread {
+                        adCallback?.onAdFailedToLoad(timeoutError)
+                        analyticsTracker.logEvent("aj_reward_load_fail_timeout")
+                    }
+                }
+            }
+        } else null
+
+        timeoutRunnable?.let { mainHandler.postDelayed(it, timeOutMilliSecond!!.toLong()) }
+
         val adRequest = getAdRequest(adUnitId)
         RewardedAd.load(adRequest, object : AdLoadCallback<RewardedAd> {
             override fun onAdLoaded(ad: RewardedAd) {
+                timeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+                if (!isCompleted.compareAndSet(false, true)) return
+
                 runOnUiThread {
                     analyticsTracker.logEvent("aj_reward_load_success")
                     adCallback?.onAdLoaded(ad)
@@ -333,6 +373,9 @@ class RewardHelper @Inject constructor(
             }
 
             override fun onAdFailedToLoad(adError: LoadAdError) {
+                timeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+                if (!isCompleted.compareAndSet(false, true)) return
+
                 if (adError.code == LoadAdError.ErrorCode.NO_FILL) {
                     adMobRateLimiter.recordNoFill(adUnitId)
                 }

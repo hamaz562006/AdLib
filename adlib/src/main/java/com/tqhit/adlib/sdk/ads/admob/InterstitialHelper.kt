@@ -25,6 +25,7 @@ import com.tqhit.adlib.sdk.utils.NetworkUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -167,6 +168,28 @@ class InterstitialHelper @Inject constructor(
         }
 
         if (interstitialAd == null) {
+            val adUnitId = resolveAdUnitId(Constant.RC_IV_AD_UNIT_ID, interstitialAdUnitId)
+            if (!adMobRateLimiter.canRequest(adUnitId)) {
+                Log.w(TAG, "Interstitial adUnitId $adUnitId is in NO_FILL cooldown")
+                if (isHouseAutoFallback() && !activity.isFinishing && !activity.isDestroyed) {
+                    runOnUiThread {
+                        adCallback?.onHouseAdShown("In NO_FILL cooldown")
+                        houseInterstitialHelper.showHouseInterstitial(
+                            activity,
+                            createBridgedHouseCallback(adCallback),
+                            ignoreFrequencyCheck = true
+                        )
+                    }
+                } else {
+                    runOnUiThread {
+                        val noFillError = LoadAdError(LoadAdError.ErrorCode.NO_FILL, "In NO_FILL cooldown", null)
+                        adCallback?.onAdFailedToLoad(noFillError)
+                        adCallback?.onAdClosed()
+                    }
+                }
+                return
+            }
+
             val loadingAdsDialog = LoadingAdsDialog(activity)
             if (!activity.isFinishing && !activity.isDestroyed) {
                 loadingAdsDialog.show()
@@ -331,9 +354,27 @@ class InterstitialHelper @Inject constructor(
             return
         }
 
+        val isCompleted = AtomicBoolean(false)
+        val timeoutRunnable = if (timeoutMilliSecond != null && timeoutMilliSecond > 0) {
+            Runnable {
+                if (isCompleted.compareAndSet(false, true)) {
+                    val timeoutError = LoadAdError(LoadAdError.ErrorCode.NETWORK_ERROR, "Interstitial load timeout", null)
+                    runOnUiThread {
+                        adCallback?.onAdFailedToLoad(timeoutError)
+                        analyticsTracker.logEvent("aj_inters_load_fail_timeout")
+                    }
+                }
+            }
+        } else null
+
+        timeoutRunnable?.let { mainHandler.postDelayed(it, timeoutMilliSecond!!.toLong()) }
+
         val adRequest = getAdRequest(adUnitId)
         InterstitialAd.load(adRequest, object : AdLoadCallback<InterstitialAd> {
             override fun onAdLoaded(ad: InterstitialAd) {
+                timeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+                if (!isCompleted.compareAndSet(false, true)) return
+
                 runOnUiThread {
                     adCallback?.onAdLoaded(ad)
                     analyticsTracker.logEvent("aj_inters_load_success")
@@ -341,6 +382,9 @@ class InterstitialHelper @Inject constructor(
             }
 
             override fun onAdFailedToLoad(adError: LoadAdError) {
+                timeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+                if (!isCompleted.compareAndSet(false, true)) return
+
                 if (adError.code == LoadAdError.ErrorCode.NO_FILL) {
                     adMobRateLimiter.recordNoFill(adUnitId)
                 }

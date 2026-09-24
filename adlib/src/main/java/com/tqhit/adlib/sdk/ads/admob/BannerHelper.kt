@@ -13,9 +13,15 @@ import com.google.android.libraries.ads.mobile.sdk.banner.BannerAdRequest
 import com.google.android.libraries.ads.mobile.sdk.common.AdLoadCallback
 import com.google.android.libraries.ads.mobile.sdk.common.AdValue
 import com.google.android.libraries.ads.mobile.sdk.common.LoadAdError
+import android.os.Handler
+import android.os.Looper
+import android.view.LayoutInflater
+import com.facebook.shimmer.ShimmerFrameLayout
+import com.tqhit.adlib.R
 import com.tqhit.adlib.sdk.ads.callback.admob.BannerAdCallback
 import com.tqhit.adlib.sdk.ads.callback.house.HouseBannerAdCallback
 import com.tqhit.adlib.sdk.ads.house.HouseBannerHelper
+import com.tqhit.adlib.sdk.ads.house.model.HouseAdItem
 import com.tqhit.adlib.sdk.analytics.AnalyticsTracker
 import com.tqhit.adlib.sdk.data.local.PreferencesHelper
 import com.tqhit.adlib.sdk.firebase.FirebaseRemoteConfigHelper
@@ -25,6 +31,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -34,8 +41,33 @@ class BannerHelper @Inject constructor(
     private val analyticsTracker: AnalyticsTracker,
     private val remoteConfigHelper: FirebaseRemoteConfigHelper,
     private val preferencesHelper: PreferencesHelper,
+    private val adMobRateLimiter: AdmobRateLimiter,
     private val houseBannerHelper: HouseBannerHelper
 ) {
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    private fun showShimmer(activity: Activity, parent: ViewGroup): View? {
+        return try {
+            val shimmerView = LayoutInflater.from(activity).inflate(R.layout.ad_banner_shimmer, parent, false)
+            val shimmer = shimmerView.findViewById<ShimmerFrameLayout>(R.id.shimmer_container_banner)
+                ?: (shimmerView as? ShimmerFrameLayout)
+            parent.removeAllViews()
+            parent.addView(shimmerView)
+            shimmer?.startShimmer()
+            shimmerView
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun stopAndRemoveShimmer(parent: ViewGroup, shimmerView: View?) {
+        shimmerView?.let { view ->
+            val shimmer = view.findViewById<ShimmerFrameLayout>(R.id.shimmer_container_banner)
+                ?: (view as? ShimmerFrameLayout)
+            shimmer?.stopShimmer()
+            parent.removeView(view)
+        }
+    }
     private fun isAdEnabled(): Boolean {
         if (preferencesHelper.getBoolean(Constant.IS_PREMIUM, false)) return false
         if (Constant.DEBUG_MODE) return true
@@ -125,21 +157,28 @@ class BannerHelper @Inject constructor(
         timeoutMilliSecond: Int?,
         adCallback: BannerAdCallback?
     ) {
+        val shimmerView = showShimmer(activity, parent)
+
         if (!NetworkUtils.isNetworkAvailable(activity)) {
             if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)) {
                 activity.runOnUiThread {
                     adCallback?.onHouseAdShown("Network unavailable")
-                    houseBannerHelper.loadHouseBanner(activity, parent, createBridgedBannerCallback(activity, adCallback))
+                    houseBannerHelper.loadHouseBanner(
+                        activity,
+                        parent,
+                        createBridgedBannerCallback(activity, parent, shimmerView, adCallback)
+                    )
                 }
             } else {
                 activity.runOnUiThread {
+                    stopAndRemoveShimmer(parent, shimmerView)
                     adCallback?.onAdFailedToLoad(null)
                 }
             }
             return
         }
 
-        executeLoadBannerWithFallback(activity, bannerAdUnitId, parent, timeoutMilliSecond, adCallback)
+        executeLoadBannerWithFallback(activity, bannerAdUnitId, parent, timeoutMilliSecond, adCallback, shimmerView)
     }
 
     private fun executeLoadBannerWithFallback(
@@ -147,11 +186,34 @@ class BannerHelper @Inject constructor(
         bannerAdUnitId: String,
         parent: ViewGroup,
         timeoutMilliSecond: Int?,
-        adCallback: BannerAdCallback?
+        adCallback: BannerAdCallback?,
+        shimmerView: View?
     ) {
+        val effectiveAdUnitId = resolveAdUnitId(Constant.RC_BN_AD_UNIT_ID, bannerAdUnitId)
+        if (!adMobRateLimiter.canRequest(effectiveAdUnitId)) {
+            if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_AUTO_FALLBACK)) {
+                activity.runOnUiThread {
+                    adCallback?.onHouseAdShown("In NO_FILL cooldown")
+                    houseBannerHelper.loadHouseBanner(
+                        activity,
+                        parent,
+                        createBridgedBannerCallback(activity, parent, shimmerView, adCallback)
+                    )
+                }
+            } else {
+                activity.runOnUiThread {
+                    stopAndRemoveShimmer(parent, shimmerView)
+                    val cooldownError = LoadAdError(LoadAdError.ErrorCode.NO_FILL, "In NO_FILL cooldown", null)
+                    adCallback?.onAdFailedToLoad(cooldownError)
+                }
+            }
+            return
+        }
+
         loadBanner(activity, bannerAdUnitId, timeoutMilliSecond, object : BannerAdCallback() {
             override fun onAdLoaded(adView: AdView) {
                 activity.runOnUiThread {
+                    stopAndRemoveShimmer(parent, shimmerView)
                     parent.removeAllViews()
                     parent.addView(adView)
                     adCallback?.onAdLoaded(adView)
@@ -163,10 +225,15 @@ class BannerHelper @Inject constructor(
                     val reason = adError?.message ?: adError?.code?.toString() ?: "Unknown AdMob error"
                     activity.runOnUiThread {
                         adCallback?.onHouseAdShown(reason)
-                        houseBannerHelper.loadHouseBanner(activity, parent, createBridgedBannerCallback(activity, adCallback))
+                        houseBannerHelper.loadHouseBanner(
+                            activity,
+                            parent,
+                            createBridgedBannerCallback(activity, parent, shimmerView, adCallback)
+                        )
                     }
                 } else {
                     activity.runOnUiThread {
+                        stopAndRemoveShimmer(parent, shimmerView)
                         adCallback?.onAdFailedToLoad(adError)
                     }
                 }
@@ -190,8 +257,19 @@ class BannerHelper @Inject constructor(
         })
     }
 
-    private fun createBridgedBannerCallback(activity: Activity, adCallback: BannerAdCallback?): HouseBannerAdCallback {
+    private fun createBridgedBannerCallback(
+        activity: Activity,
+        parent: ViewGroup,
+        shimmerView: View?,
+        adCallback: BannerAdCallback?
+    ): HouseBannerAdCallback {
         return object : HouseBannerAdCallback() {
+            override fun onAdLoaded(houseAdItem: HouseAdItem) {
+                activity.runOnUiThread {
+                    stopAndRemoveShimmer(parent, shimmerView)
+                }
+            }
+
             override fun onAdImpression() {
                 activity.runOnUiThread { adCallback?.onAdImpression() }
             }
@@ -205,7 +283,10 @@ class BannerHelper @Inject constructor(
             }
 
             override fun onAdFailedToLoad(errorMessage: String) {
-                activity.runOnUiThread { adCallback?.onAdFailedToLoad(null) }
+                activity.runOnUiThread {
+                    stopAndRemoveShimmer(parent, shimmerView)
+                    adCallback?.onAdFailedToLoad(null)
+                }
             }
         }
     }
@@ -217,21 +298,28 @@ class BannerHelper @Inject constructor(
         timeoutMilliSecond: Int?,
         adCallback: BannerAdCallback?
     ) {
+        val shimmerView = showShimmer(activity, parent)
+
         if (!NetworkUtils.isNetworkAvailable(activity)) {
             if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_ENABLED)) {
                 activity.runOnUiThread {
                     adCallback?.onHouseAdShown("Network unavailable")
-                    houseBannerHelper.loadHouseBanner(activity, parent, createBridgedBannerCallback(activity, adCallback))
+                    houseBannerHelper.loadHouseBanner(
+                        activity,
+                        parent,
+                        createBridgedBannerCallback(activity, parent, shimmerView, adCallback)
+                    )
                 }
             } else {
                 activity.runOnUiThread {
+                    stopAndRemoveShimmer(parent, shimmerView)
                     adCallback?.onAdFailedToLoad(null)
                 }
             }
             return
         }
 
-        executeLoadCollapsibleBannerWithFallback(activity, bannerAdUnitId, parent, timeoutMilliSecond, adCallback)
+        executeLoadCollapsibleBannerWithFallback(activity, bannerAdUnitId, parent, timeoutMilliSecond, adCallback, shimmerView)
     }
 
     private fun executeLoadCollapsibleBannerWithFallback(
@@ -239,11 +327,34 @@ class BannerHelper @Inject constructor(
         bannerAdUnitId: String,
         parent: ViewGroup,
         timeoutMilliSecond: Int?,
-        adCallback: BannerAdCallback?
+        adCallback: BannerAdCallback?,
+        shimmerView: View?
     ) {
+        val effectiveAdUnitId = resolveAdUnitId(Constant.RC_C_BN_AD_UNIT_ID, bannerAdUnitId)
+        if (!adMobRateLimiter.canRequest(effectiveAdUnitId)) {
+            if (remoteConfigHelper.getBoolean(Constant.RC_HOUSE_ADS_AUTO_FALLBACK)) {
+                activity.runOnUiThread {
+                    adCallback?.onHouseAdShown("In NO_FILL cooldown")
+                    houseBannerHelper.loadHouseBanner(
+                        activity,
+                        parent,
+                        createBridgedBannerCallback(activity, parent, shimmerView, adCallback)
+                    )
+                }
+            } else {
+                activity.runOnUiThread {
+                    stopAndRemoveShimmer(parent, shimmerView)
+                    val cooldownError = LoadAdError(LoadAdError.ErrorCode.NO_FILL, "In NO_FILL cooldown", null)
+                    adCallback?.onAdFailedToLoad(cooldownError)
+                }
+            }
+            return
+        }
+
         loadCollapsibleBanner(activity, bannerAdUnitId, timeoutMilliSecond, object : BannerAdCallback() {
             override fun onAdLoaded(adView: AdView) {
                 activity.runOnUiThread {
+                    stopAndRemoveShimmer(parent, shimmerView)
                     parent.removeAllViews()
                     parent.addView(adView)
                     adCallback?.onAdLoaded(adView)
@@ -255,10 +366,15 @@ class BannerHelper @Inject constructor(
                     val reason = adError?.message ?: adError?.code?.toString() ?: "Unknown AdMob error"
                     activity.runOnUiThread {
                         adCallback?.onHouseAdShown(reason)
-                        houseBannerHelper.loadHouseBanner(activity, parent, createBridgedBannerCallback(activity, adCallback))
+                        houseBannerHelper.loadHouseBanner(
+                            activity,
+                            parent,
+                            createBridgedBannerCallback(activity, parent, shimmerView, adCallback)
+                        )
                     }
                 } else {
                     activity.runOnUiThread {
+                        stopAndRemoveShimmer(parent, shimmerView)
                         adCallback?.onAdFailedToLoad(adError)
                     }
                 }
@@ -300,8 +416,26 @@ class BannerHelper @Inject constructor(
         adCallback?.onDiagnosticInfo("Computed AdSize: width=${adSize.width}, height=${adSize.height}")
         val adRequest = getAdRequest(effectiveAdUnitId, adSize)
 
+        val isCompleted = AtomicBoolean(false)
+        val timeoutRunnable = if (timeoutMilliSecond != null && timeoutMilliSecond > 0) {
+            Runnable {
+                if (isCompleted.compareAndSet(false, true)) {
+                    val timeoutError = LoadAdError(LoadAdError.ErrorCode.NETWORK_ERROR, "Banner load timeout", null)
+                    activity.runOnUiThread {
+                        adCallback?.onAdFailedToLoad(timeoutError)
+                        analyticsTracker.logEvent("aj_banner_load_fail_timeout")
+                    }
+                }
+            }
+        } else null
+
+        timeoutRunnable?.let { mainHandler.postDelayed(it, timeoutMilliSecond!!.toLong()) }
+
         adView.loadAd(adRequest, object : AdLoadCallback<BannerAd> {
             override fun onAdLoaded(bannerAd: BannerAd) {
+                timeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+                if (!isCompleted.compareAndSet(false, true)) return
+
                 bannerAd.adEventCallback = object : BannerAdEventCallback {
                     override fun onAdClicked() {
                         activity.runOnUiThread {
@@ -347,6 +481,13 @@ class BannerHelper @Inject constructor(
             }
 
             override fun onAdFailedToLoad(loadAdError: LoadAdError) {
+                timeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+                if (!isCompleted.compareAndSet(false, true)) return
+
+                if (loadAdError.code == LoadAdError.ErrorCode.NO_FILL) {
+                    adMobRateLimiter.recordNoFill(effectiveAdUnitId)
+                }
+
                 activity.runOnUiThread {
                     adCallback?.onAdFailedToLoad(loadAdError)
                     analyticsTracker.logEvent("aj_banner_load_fail", mapOf(
@@ -378,8 +519,26 @@ class BannerHelper @Inject constructor(
         adCallback?.onDiagnosticInfo("Computed AdSize: width=${adSize.width}, height=${adSize.height}")
         val adRequest = getCollapsibleAdRequest(effectiveAdUnitId, adSize)
 
+        val isCompleted = AtomicBoolean(false)
+        val timeoutRunnable = if (timeoutMilliSecond != null && timeoutMilliSecond > 0) {
+            Runnable {
+                if (isCompleted.compareAndSet(false, true)) {
+                    val timeoutError = LoadAdError(LoadAdError.ErrorCode.NETWORK_ERROR, "Collapsible banner load timeout", null)
+                    activity.runOnUiThread {
+                        adCallback?.onAdFailedToLoad(timeoutError)
+                        analyticsTracker.logEvent("aj_banner_load_fail_timeout")
+                    }
+                }
+            }
+        } else null
+
+        timeoutRunnable?.let { mainHandler.postDelayed(it, timeoutMilliSecond!!.toLong()) }
+
         adView.loadAd(adRequest, object : AdLoadCallback<BannerAd> {
             override fun onAdLoaded(bannerAd: BannerAd) {
+                timeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+                if (!isCompleted.compareAndSet(false, true)) return
+
                 bannerAd.adEventCallback = object : BannerAdEventCallback {
                     override fun onAdClicked() {
                         activity.runOnUiThread {
@@ -425,6 +584,13 @@ class BannerHelper @Inject constructor(
             }
 
             override fun onAdFailedToLoad(loadAdError: LoadAdError) {
+                timeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+                if (!isCompleted.compareAndSet(false, true)) return
+
+                if (loadAdError.code == LoadAdError.ErrorCode.NO_FILL) {
+                    adMobRateLimiter.recordNoFill(effectiveAdUnitId)
+                }
+
                 activity.runOnUiThread {
                     adCallback?.onAdFailedToLoad(loadAdError)
                     analyticsTracker.logEvent("aj_banner_load_fail", mapOf(

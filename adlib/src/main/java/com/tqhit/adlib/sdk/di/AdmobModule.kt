@@ -48,9 +48,10 @@ object AdmobModule {
     fun provideAdaptiveBannerHelper(
         preferencesHelper: PreferencesHelper,
         remoteConfigHelper: FirebaseRemoteConfigHelper,
+        adMobRateLimiter: AdmobRateLimiter,
         houseBannerHelper: HouseBannerHelper
     ): AdaptiveBannerHelper {
-        return AdaptiveBannerHelper(preferencesHelper, remoteConfigHelper, houseBannerHelper)
+        return AdaptiveBannerHelper(preferencesHelper, remoteConfigHelper, adMobRateLimiter, houseBannerHelper)
     }
 
     @Provides
@@ -79,9 +80,10 @@ object AdmobModule {
         analyticsTracker: AnalyticsTracker,
         remoteConfigHelper: FirebaseRemoteConfigHelper,
         preferencesHelper: PreferencesHelper,
+        adMobRateLimiter: AdmobRateLimiter,
         houseBannerHelper: HouseBannerHelper
     ): BannerHelper {
-        return BannerHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper, houseBannerHelper)
+        return BannerHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper, adMobRateLimiter, houseBannerHelper)
     }
 
     @Provides
@@ -105,9 +107,10 @@ object AdmobModule {
         analyticsTracker: AnalyticsTracker,
         remoteConfigHelper: FirebaseRemoteConfigHelper,
         preferencesHelper: PreferencesHelper,
+        adMobRateLimiter: AdmobRateLimiter,
         houseNativeHelper: HouseNativeHelper
     ): NativeHelper {
-        return NativeHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper, houseNativeHelper)
+        return NativeHelper(admobConsentHelper, analyticsTracker, remoteConfigHelper, preferencesHelper, adMobRateLimiter, houseNativeHelper)
     }
 
     @Provides

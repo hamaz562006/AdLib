@@ -55,6 +55,7 @@ open class AdLibHiltApplication : AdLibBaseApplication() {
     private var isAdMobReady = false
     private var isRemoteConfigReady = false
     private var pendingShowAOA = false
+    private var pendingInitAOA = false
 
     private val adMobReadyListeners = mutableListOf<() -> Unit>()
     private val remoteConfigReadyListeners = mutableListOf<() -> Unit>()
@@ -148,6 +149,14 @@ open class AdLibHiltApplication : AdLibBaseApplication() {
     }
 
     fun initAOA() {
+        if (!isAdMobReady) {
+            // MobileAds هنوز init نشده؛ این درخواست رو به‌جای اجرای فوری (که کرش می‌کنه)، معلق نگه دار
+            // تا initAdmobAndAOA() خودش، بعد از اتمام واقعی init، این متد رو دوباره صدا بزنه
+            pendingInitAOA = true
+            return
+        }
+        pendingInitAOA = false
+
         val adConfig = activityAdLoader.getAdConfig(APP_AOA_CONFIG_KEY)
         val useHouseAd = adConfig?.useHouseAd ?: false
         val customId = adConfig?.customId
